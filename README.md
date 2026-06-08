@@ -67,17 +67,179 @@ quant-guru-desk/
 
 ### Install
 
-**QoderWork:**
-```bash
-git clone <repo-url> ~/.qoderwork/skills/quant-guru-desk
-```
-Or copy the folder into `~/.qoderwork/skills/`, or drag the `.skill` package into QoderWork.
+Clone the repository first, then set up for your platform:
 
-**Claude Code / Codex:**
 ```bash
-cp -R quant-guru-desk ~/.claude/skills/      # Claude Code
-cp -R quant-guru-desk ~/.codex/skills/       # Codex
+git clone https://github.com/chuehjen/quant-guru-desk.git
 ```
+
+---
+
+#### QoderWork
+
+```bash
+git clone https://github.com/chuehjen/quant-guru-desk.git ~/.qoderwork/skills/quant-guru-desk
+```
+
+Or copy the folder into `~/.qoderwork/skills/`, or drag the `.skill` package into QoderWork. The skill is immediately available via `/quant-guru-desk` or by mentioning any guru name.
+
+---
+
+#### Claude Code
+
+```bash
+cp -R quant-guru-desk ~/.claude/skills/quant-guru-desk
+```
+
+Claude Code reads `SKILL.md` from `~/.claude/skills/<name>/` automatically. Use slash commands or mention a guru name to activate.
+
+---
+
+#### OpenAI Codex CLI
+
+Codex discovers instructions via `AGENTS.md` files. Two approaches:
+
+**Option A — Symlink as a skill folder (recommended):**
+```bash
+ln -s $(pwd)/quant-guru-desk ~/.codex/skills/quant-guru-desk
+```
+
+**Option B — Reference in your global AGENTS.md:**
+```bash
+# In ~/.codex/AGENTS.md, add:
+echo '## Skills
+Read ~/.codex/skills/quant-guru-desk/SKILL.md for the quant-guru-desk investment agent collection.' >> ~/.codex/AGENTS.md
+```
+
+Codex will follow the reference chain from SKILL.md → guru sub-files → shared resources.
+
+---
+
+#### Cursor IDE
+
+Cursor uses `.cursor/rules/` for project-level rules (`.mdc` format with YAML frontmatter).
+
+**Option A — Global rule (available in all projects):**
+
+Create `~/.cursor/rules/quant-guru-desk.mdc`:
+```markdown
+---
+description: "Quant Guru Desk — summon investing-guru agents for stock analysis"
+globs: "*"
+alwaysApply: false
+---
+
+When the user asks for stock analysis, guru analysis, or mentions Serenity/Kindig/Cathie/会诊/投资竞赛, read and follow the instructions in:
+~/.cursor/skills/quant-guru-desk/SKILL.md
+```
+
+Then clone the skill:
+```bash
+git clone https://github.com/chuehjen/quant-guru-desk.git ~/.cursor/skills/quant-guru-desk
+```
+
+**Option B — Project-level (include in a repo):**
+```bash
+cp -R quant-guru-desk .cursor/skills/quant-guru-desk
+```
+Add a rule file at `.cursor/rules/quant-guru-desk.mdc` referencing `.cursor/skills/quant-guru-desk/SKILL.md`.
+
+---
+
+#### Windsurf (Codeium)
+
+Windsurf uses `.windsurf/rules/` (modern format) or global rules via Settings.
+
+**Option A — Global rule (recommended):**
+
+1. Open Windsurf → Settings → Cascade → Global Rules
+2. Add:
+```
+When the user asks for stock analysis or mentions Serenity/Kindig/Cathie/会诊/投资竞赛, read and follow: ~/.windsurf/skills/quant-guru-desk/SKILL.md
+```
+3. Clone the skill:
+```bash
+git clone https://github.com/chuehjen/quant-guru-desk.git ~/.windsurf/skills/quant-guru-desk
+```
+
+**Option B — Project-level:**
+
+Create `.windsurf/rules/quant-guru-desk.md`:
+```markdown
+---
+trigger: glob
+globs: ["*"]
+---
+
+For investment analysis tasks, read .windsurf/skills/quant-guru-desk/SKILL.md and follow the guru methodology.
+```
+
+---
+
+#### Cline / Roo Code (VS Code)
+
+Cline uses `~/Documents/Cline/Rules/` for global rules and `.clinerules/` for project-level.
+
+**Global setup:**
+```bash
+# 1. Clone the skill
+git clone https://github.com/chuehjen/quant-guru-desk.git ~/Documents/Cline/Skills/quant-guru-desk
+
+# 2. Create a global rule file
+cat > ~/Documents/Cline/Rules/quant-guru-desk.md << 'EOF'
+# Quant Guru Desk
+
+When the user asks for stock analysis, guru analysis, or mentions
+Serenity / Kindig / Cathie / 会诊 / 投资竞赛 / 大神事务所:
+
+Read and follow ~/Documents/Cline/Skills/quant-guru-desk/SKILL.md
+EOF
+```
+
+**Project-level:**
+```bash
+cp -R quant-guru-desk .clinerules/quant-guru-desk
+```
+
+---
+
+#### GitHub Copilot
+
+Copilot reads `.github/copilot-instructions.md` for repository-wide context.
+
+```bash
+# In your project's .github/copilot-instructions.md, add:
+cat >> .github/copilot-instructions.md << 'EOF'
+
+## Investment Analysis (Quant Guru Desk)
+
+For stock analysis and investment research tasks, reference the quant-guru-desk
+skill at: ~/.github/skills/quant-guru-desk/SKILL.md
+
+Follow the guru routing logic: Serenity for supply-chain bottlenecks,
+Beth Kindig for forward-revenue modeling, Cathie Wood for disruptive innovation.
+Panel mode for multi-guru debate.
+EOF
+```
+
+Clone globally:
+```bash
+git clone https://github.com/chuehjen/quant-guru-desk.git ~/.github/skills/quant-guru-desk
+```
+
+> **Note:** Copilot cannot directly read external files at runtime. The instructions above serve as context hints — for full functionality, paste key sections of SKILL.md into `copilot-instructions.md` or use Copilot Chat's `@workspace` with the skill folder in your project.
+
+---
+
+#### Universal install (any agent that reads markdown)
+
+For any AI agent that supports custom instruction files:
+
+```bash
+git clone https://github.com/chuehjen/quant-guru-desk.git <agent-skills-path>/quant-guru-desk
+```
+
+Point your agent's system prompt or instruction file to `SKILL.md` in the cloned directory. The skill is self-contained — SKILL.md references `gurus/*/SKILL.md` and `shared/*.md` via relative paths.
 
 ### Adding a new guru
 
@@ -146,9 +308,20 @@ For information tracking and research only. **Not investment advice.** Do your o
 ### 安装
 
 ```bash
-git clone <repo-url> ~/.qoderwork/skills/quant-guru-desk    # QoderWork
-cp -R quant-guru-desk ~/.claude/skills/                     # Claude Code
+git clone https://github.com/chuehjen/quant-guru-desk.git
 ```
+
+| 平台 | 安装路径 | 备注 |
+|------|---------|------|
+| **QoderWork** | `~/.qoderwork/skills/quant-guru-desk` | 即装即用，支持 `/quant-guru-desk` 调用 |
+| **Claude Code** | `~/.claude/skills/quant-guru-desk` | 自动识别 SKILL.md |
+| **OpenAI Codex** | `~/.codex/skills/quant-guru-desk` | 或在 `~/.codex/AGENTS.md` 中引用 |
+| **Cursor** | `~/.cursor/skills/quant-guru-desk` | 需配合 `.cursor/rules/*.mdc` 规则文件 |
+| **Windsurf** | `~/.windsurf/skills/quant-guru-desk` | 通过 Global Rules 或 `.windsurf/rules/` 引用 |
+| **Cline / Roo** | `~/Documents/Cline/Skills/quant-guru-desk` | 配合 `~/Documents/Cline/Rules/*.md` |
+| **GitHub Copilot** | `~/.github/skills/quant-guru-desk` | 在 `.github/copilot-instructions.md` 中引用 |
+
+详细的逐平台安装说明见英文 [Install](#install) 部分。
 
 ### 质量保证（v1.1+）
 
