@@ -45,6 +45,13 @@ Search the web (use WebSearch) for these queries:
 
 ### Step B: Apply the disruptive-innovation workflow
 
+**Minimum completion standards (Daily Run / Theme Scan):**
+- Identify which of the 5 innovation platforms the candidate belongs to (and whether convergence applies)
+- Evaluate ≥ 5 candidates across platforms before final ranking
+- Cite ≥ 1 Strong source per Wright's Law cost-curve claim and TAM estimate
+- Final recommendation: top 10-15 ranked candidates with 15%/5yr hurdle check
+- Each candidate must have: platform tag + 6-metric score + at least 1 thesis-risk acknowledgment
+
 For each candidate, run the workflow (full detail in `references/framework.md`):
 
 1. **Identify the platform** — which of the 5 (AI, Robotics/Autonomous, Energy Storage, Public Blockchain, Multiomics/Genomics)?
@@ -171,6 +178,10 @@ Search for ARK's latest moves and the company's milestones first.
 7. Define jargon on first use (see `references/glossary.md`).
 8. Output in Chinese; tickers and domain terms in English.
 9. Always end with: **仅作信息跟踪，不构成投资建议。**
+10. Grade every data point per `shared/evidence-standards.md` (Strong/Medium/Weak). Cite the source inline.
+11. A 5-year EV model built on Weak-only evidence must be labeled `[未验证模型]` and cannot clear the 15% CAGR hurdle by default.
+12. Trigger red-flag disclosure (see evidence-standards) whenever applicable — especially for high-beta drawdown risk and dollar-weighted underperformance history.
+13. Enforce arithmetic identity `Σ市值 + 现金 = 总资产` on every competition output. Re-derive cash if needed.
 
 ## Persona notes
 

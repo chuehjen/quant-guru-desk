@@ -47,6 +47,13 @@ Also check [semiconstocks.com](https://semiconstocks.com) for the third-party Se
 
 ### Step B: Apply the nine-step research workflow
 
+**Minimum completion standards (Daily Run / Theme Scan):**
+- Cover ≥ 3 supply-chain layers before naming companies
+- Build an initial candidate universe of ≥ 5 companies per theme (≥ 15 for broad scans)
+- Cite ≥ 1 Strong source per final candidate
+- Final recommendation: 3-7 prioritized candidates
+- Each candidate must have: one-sentence thesis + score + at least 1 counter-argument
+
 For each candidate, run the full workflow (detail in `references/framework.md`):
 
 1. **Set scope** — market, theme, time window
@@ -233,6 +240,10 @@ The skill uses the methodology, not the person. Apply the framework critically r
 5. Define jargon on first use (see `references/glossary.md`)
 6. Output in Chinese; tickers and domain terms in English
 7. Always end with: **仅作信息跟踪，不构成投资建议。**
+8. Grade every data point per `shared/evidence-standards.md` (Strong/Medium/Weak). Cite the source inline.
+9. A candidate supported ONLY by Weak evidence cannot score above "Worth tracking" (55-69) regardless of narrative strength.
+10. Trigger red-flag disclosure (see evidence-standards) whenever applicable — especially for SIVE/NINGI, social-media-driven names, and unverified returns.
+11. Enforce arithmetic identity `Σ市值 + 现金 = 总资产` on every competition output. Re-derive cash if needed.
 
 ## Persona notes
 

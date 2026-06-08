@@ -2,6 +2,8 @@
 
 > A desk of distilled investing-guru AI agents. Summon any famous investor to analyze a stock, build a portfolio, or run a daily competition decision — in their authentic style. One project, many gurus.
 
+**v2.0.0** · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+
 [中文](#中文) · [English](#english)
 
 ---
@@ -37,8 +39,25 @@ Each guru is a faithful distillation of a real, public methodology — with thei
 ```
 quant-guru-desk/
 ├── SKILL.md                    # The desk: roster + router + smart-recommend + panel mode
+├── CHANGELOG.md                # Version history
+├── CONTRIBUTING.md             # How to contribute / add new gurus
+├── dashboard/
+│   └── index.html              # Competition visualization dashboard (Chart.js)
+├── evals/
+│   └── test-cases.md           # 10 behavioral test cases (release gate)
+├── examples/
+│   ├── daily-run-serenity.md   # Serenity daily-run output demo
+│   ├── panel-mode-amd.md       # Three-guru panel debate demo
+│   └── competition-day5.md     # Competition Day 5 output demo
+├── scripts/
+│   ├── scorecard.py            # Local scoring tool (Python 3.9+, zero deps)
+│   └── gf_dma.py              # GF-DMA health index calculator (Python 3.9+, zero deps)
 ├── shared/
-│   ├── competition-rules.md    # Competition rules + exact output format (single source of truth)
+│   ├── bayesian-valuation.md   # Bayesian intrinsic growth valuation tool
+│   ├── competition-rules.md    # Competition rules + exact output format
+│   ├── dialogue-protocol.md    # 5-level teaching ladder for Learn mode
+│   ├── evidence-standards.md   # Three-tier evidence ladder + citation rules + red flags
+│   ├── market-sources.md       # Cross-market information source playbook (7 markets)
 │   └── price-fetching.md       # Price fallback chain + conflict/split checks
 └── gurus/
     ├── serenity/      (SKILL.md + references/)   # supply-chain chokepoints
@@ -62,10 +81,27 @@ cp -R quant-guru-desk ~/.codex/skills/       # Codex
 
 ### Adding a new guru
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide. In short:
+
 1. Create `gurus/<new-guru>/SKILL.md` (frontmatter + router + methodology + scoring + persona + hard rules + references table).
 2. Add `gurus/<new-guru>/references/` (framework, scoring-system, holdings, track-record, glossary, competition-format).
 3. Add the guru to the roster table and smart-recommendation mapping in the root `SKILL.md`, and to this README.
 4. Distill the *real* methodology, cite sources, and include an honest track-record/criticism section.
+5. Verify all `evals/test-cases.md` still pass.
+
+### Quality guarantees (v1.1+)
+
+- **Evidence grading** — Every data point is labeled Strong/Medium/Weak with source attribution. No more hallucinated numbers.
+- **Arithmetic identity** — Every competition output passes `Σ市值 + 现金 = 总资产`. Catches the #1 LLM math error.
+- **Behavioral tests** — 10 test cases gate every release. The skill cannot ship if it hallucinates, gives buy/sell instructions, or blends guru voices.
+- **Red-flag disclosure** — Mandatory risk callouts when evidence is weak, accounting is suspicious, or a short report exists.
+
+### Tools & enhancements (v2.0+)
+
+- **Cross-market sources** — 7-market playbook (US/A-shares/HK/Taiwan/Japan/Korea/Europe) for tracing non-US supply chain evidence.
+- **Bayesian valuation** — Shared tool to separate intrinsic growth from FOMO/narrative. Any guru can invoke it for "is the growth priced in?" questions.
+- **GF-DMA health index** — Python CLI to score whether a stock's price trend is supported by fundamental growth (0-100, 6 states).
+- **Competition dashboard** — Drop-in HTML file to visualize guru portfolio performance over time (Chart.js).
 
 ### Acknowledgments
 
@@ -113,6 +149,20 @@ For information tracking and research only. **Not investment advice.** Do your o
 git clone <repo-url> ~/.qoderwork/skills/quant-guru-desk    # QoderWork
 cp -R quant-guru-desk ~/.claude/skills/                     # Claude Code
 ```
+
+### 质量保证（v1.1+）
+
+- **证据分级** — 每个数据点标注 Strong/Medium/Weak + 来源。杜绝 AI 编造数据。
+- **算术恒等校验** — 每次竞赛输出强制通过 `Σ市值 + 现金 = 总资产`。
+- **行为测试** — 10 个测试用例把关每次发布，不通过不上线。
+- **红旗披露** — 证据薄弱、会计可疑、做空报告存在时强制风险提示。
+
+### 工具增强（v2.0+）
+
+- **跨市场信息源** — 7 市场手册（美/A股/港/台/日/韩/欧），追溯非美供应链证据。
+- **贝叶斯估值** — 共享工具，分离内在增长与 FOMO/叙事溢价。任意大神可调用。
+- **GF-DMA 健康指数** — Python CLI 评估股价走势是否有基本面支撑（0-100 分，6 种状态）。
+- **竞赛看板** — 一个 HTML 文件，粘贴 JSON 即可可视化各大神组合历史表现。
 
 ### 免责声明
 

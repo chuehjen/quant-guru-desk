@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quant Guru Desk — Competition Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0f1419;
+  --surface: #1a2332;
+  --border: #2d3748;
+  --text: #e2e8f0;
+  --muted: #718096;
+  --accent-serenity: #8b5cf6;
+  --accent-kindig: #3b82f6;
+  --accent-cathie: #f59e0b;
+  --positive: #10b981;
+  --negative: #ef4444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif; background: var(--bg); color: var(--text); padding: 24px; line-height: 1.6; }
+h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 8px; }
+.subtitle { color: var(--muted); font-size: 0.875rem; margin-bottom: 24px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.card h3 { font-size: 0.875rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+.metric { font-size: 2rem; font-weight: 700; }
+.metric.positive { color: var(--positive); }
+.metric.negative { color: var(--negative); }
+.metric-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+.guru-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+.guru-tag.serenity { background: rgba(139,92,246,0.2); color: var(--accent-serenity); }
+.guru-tag.kindig { background: rgba(59,130,246,0.2); color: var(--accent-kindig); }
+.guru-tag.cathie { background: rgba(245,158,11,0.2); color: var(--accent-cathie); }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 500; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.chart-container { position: relative; height: 300px; margin-top: 16px; }
+.holdings-section { margin-top: 24px; }
+.disclaimer { margin-top: 32px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--muted); text-align: center; }
+#data-input { width: 100%; min-height: 200px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 12px; font-family: monospace; font-size: 0.8rem; margin-bottom: 12px; }
+button { background: var(--accent-kindig); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+button:hover { opacity: 0.9; }
+.input-section { margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<h1>Quant Guru Desk — Competition Dashboard</h1>
+<p class="subtitle">Paste competition JSON data below to visualize portfolio performance across gurus.</p>
+
+<div class="input-section">
+<textarea id="data-input" placeholder='Paste JSON here. Format:
+{
+  "competition_start": "2026-06-03",
+  "gurus": {
+    "serenity": { "daily_returns": [0, 1.2, -0.5, 2.1, 0.8], "current_value": 10450, "cash_pct": 27, "holdings_count": 5 },
+    "beth_kindig": { "daily_returns": [0, 0.8, 0.3, 1.5, 0.6], "current_value": 10320, "cash_pct": 13, "holdings_count": 6 },
+    "cathie_wood": { "daily_returns": [0, 2.1, -1.2, 3.0, -0.4], "current_value": 10355, "cash_pct": 8, "holdings_count": 12 }
+  }
+}'></textarea>
+<button onclick="renderDashboard()">Render Dashboard</button>
+<button onclick="loadExample()" style="margin-left: 8px; background: var(--border);">Load Example</button>
+</div>
+
+<div id="dashboard" style="display:none;">
+<div class="grid" id="summary-cards"></div>
+
+<div class="card">
+<h3>Cumulative Return (%)</h3>
+<div class="chart-container">
+<canvas id="returnChart"></canvas>
+</div>
+</div>
+
+<div class="holdings-section card">
+<h3>Current Snapshot</h3>
+<table id="snapshot-table">
+<thead><tr><th>Guru</th><th>Portfolio Value</th><th>Return</th><th>Cash %</th><th>Holdings</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+<div class="disclaimer">
+仅作信息跟踪，不构成投资建议。Quant Guru Desk is for research and information tracking only.
+</div>
+
+<script>
+const GURU_COLORS = {
+  serenity: '#8b5cf6',
+  beth_kindig: '#3b82f6',
+  cathie_wood: '#f59e0b'
+};
+const GURU_NAMES = {
+  serenity: 'Serenity',
+  beth_kindig: 'Beth Kindig',
+  cathie_wood: 'Cathie Wood'
+};
+
+let chart = null;
+
+function loadExample() {
+  const example = {
+    competition_start: "2026-06-03",
+    gurus: {
+      serenity: { daily_returns: [0, 1.2, -0.5, 2.1, 0.8, 1.5], current_value: 10520, cash_pct: 27, holdings_count: 5 },
+      beth_kindig: { daily_returns: [0, 0.8, 0.3, 1.5, 0.6, 0.4], current_value: 10365, cash_pct: 13, holdings_count: 6 },
+      cathie_wood: { daily_returns: [0, 2.1, -1.2, 3.0, -0.4, 1.8], current_value: 10540, cash_pct: 8, holdings_count: 12 }
+    }
+  };
+  document.getElementById('data-input').value = JSON.stringify(example, null, 2);
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const raw = document.getElementById('data-input').value.trim();
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    alert('Invalid JSON: ' + e.message);
+    return;
+  }
+
+  document.getElementById('dashboard').style.display = 'block';
+  renderSummaryCards(data);
+  renderChart(data);
+  renderTable(data);
+}
+
+function renderSummaryCards(data) {
+  const container = document.getElementById('summary-cards');
+  container.innerHTML = '';
+  for (const [key, guru] of Object.entries(data.gurus)) {
+    const ret = ((guru.current_value - 10000) / 10000 * 100).toFixed(2);
+    const isPositive = ret >= 0;
+    container.innerHTML += `
+      <div class="card">
+        <h3><span class="guru-tag ${key.split('_')[0]}">${GURU_NAMES[key] || key}</span></h3>
+        <div class="metric ${isPositive ? 'positive' : 'negative'}">${isPositive ? '+' : ''}${ret}%</div>
+        <div class="metric-label">$${guru.current_value.toLocaleString()} / Cash: ${guru.cash_pct}%</div>
+      </div>`;
+  }
+}
+
+function renderChart(data) {
+  const ctx = document.getElementById('returnChart').getContext('2d');
+  if (chart) chart.destroy();
+
+  const datasets = [];
+  for (const [key, guru] of Object.entries(data.gurus)) {
+    const cumulative = [];
+    let cum = 0;
+    for (const r of guru.daily_returns) {
+      cum += r;
+      cumulative.push(parseFloat(cum.toFixed(2)));
+    }
+    datasets.push({
+      label: GURU_NAMES[key] || key,
+      data: cumulative,
+      borderColor: GURU_COLORS[key] || '#999',
+      backgroundColor: 'transparent',
+      tension: 0.3,
+      pointRadius: 3
+    });
+  }
+
+  const labels = datasets[0].data.map((_, i) => `Day ${i}`);
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#e2e8f0' } } },
+      scales: {
+        x: { ticks: { color: '#718096' }, grid: { color: '#2d3748' } },
+        y: { ticks: { color: '#718096', callback: v => v + '%' }, grid: { color: '#2d3748' } }
+      }
+    }
+  });
+}
+
+function renderTable(data) {
+  const tbody = document.querySelector('#snapshot-table tbody');
+  tbody.innerHTML = '';
+  for (const [key, guru] of Object.entries(data.gurus)) {
+    const ret = ((guru.current_value - 10000) / 10000 * 100).toFixed(2);
+    const isPositive = ret >= 0;
+    tbody.innerHTML += `
+      <tr>
+        <td><span class="guru-tag ${key.split('_')[0]}">${GURU_NAMES[key] || key}</span></td>
+        <td>$${guru.current_value.toLocaleString()}</td>
+        <td style="color: ${isPositive ? 'var(--positive)' : 'var(--negative)'}">${isPositive ? '+' : ''}${ret}%</td>
+        <td>${guru.cash_pct}%</td>
+        <td>${guru.holdings_count}</td>
+      </tr>`;
+  }
+}
+</script>
+</body>
+</html>

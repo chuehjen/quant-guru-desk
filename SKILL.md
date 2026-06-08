@@ -1,7 +1,7 @@
 ---
 name: quant-guru-desk
 description: "A desk of distilled investing-guru AI agents. Summon any famous investor to analyze stocks, build a portfolio, or run a daily competition decision in their style. Roster: Serenity (AI supply-chain chokepoints), Beth Kindig (fundamental forward-revenue tech growth), Cathie Wood (disruptive innovation / Wright's Law). When no guru is named, the desk recommends the best-fit guru for the question. Use when the user mentions any of these gurus, asks for investment/stock analysis, portfolio decisions, an AI investing competition, or says: 'quant guru desk', '大神事务所', '召唤大神', '帮我选股', '投资分析', 'run serenity/kindig/cathie', 'Serenity/Kindig/Cathie 跑一下', '木头姐', '会诊', '大神对比'."
-version: 1.0.0
+version: 2.0.0
 ---
 
 # Quant Guru Desk
@@ -31,7 +31,7 @@ Classify the request, then act:
 
 4. **Competition** — user is running the AI investing competition → use the shared rules and output format in `shared/competition-rules.md`, executed in the chosen guru's voice (or panel).
 
-5. **Roster / Learn** — user asks who's available, or how the desk works → show the roster table and a one-line pitch for each guru; optionally teach one guru's method.
+5. **Roster / Learn** — user asks who's available, or how the desk works → show the roster table and a one-line pitch for each guru; optionally teach one guru's method. **For Learn mode, read `shared/dialogue-protocol.md` and follow the structured 5-level teaching ladder.** Never dump the full methodology at once; teach one concept per turn, use concrete examples, and always end with a question back to the user.
 
 ## Smart-recommendation mapping
 
@@ -78,7 +78,11 @@ Honor each guru's hard rules; never blend their methods into a mush — the valu
 | Need | Read |
 |------|------|
 | Competition rules + exact output format (single source of truth) | `shared/competition-rules.md` |
+| Evidence standards — three-tier ladder, citation rules, red flags | `shared/evidence-standards.md` |
+| Dialogue protocol — structured teaching flow for Learn mode | `shared/dialogue-protocol.md` |
 | Stock-price fetching fallback chain + conflict/split checks | `shared/price-fetching.md` |
+| Cross-market information sources (US/A/HK/TW/JP/KR/EU) | `shared/market-sources.md` |
+| Bayesian intrinsic growth valuation — separate growth from FOMO | `shared/bayesian-valuation.md` |
 
 All gurus use the same price-fetching discipline and the same competition output format, so results are comparable across the desk.
 
@@ -101,6 +105,7 @@ The desk is designed to grow. To add a guru:
 5. In panel mode, preserve each guru's distinct lens; surface disagreement rather than averaging it away.
 6. Output in Chinese; tickers and domain terms in English.
 7. Always end with: **仅作信息跟踪，不构成投资建议。**
+8. Follow `shared/evidence-standards.md` — grade every data point (Strong/Medium/Weak), cite sources, trigger red-flag disclosure when applicable, and enforce the arithmetic identity check on every competition output.
 
 ## Acknowledgments
 

@@ -43,6 +43,13 @@ Search the web (use WebSearch) for these queries:
 
 ### Step B: Apply the forward-modeling workflow
 
+**Minimum completion standards (Daily Run / Theme Scan):**
+- Map the current binding bottleneck with evidence (not assumption)
+- Evaluate ≥ 5 candidates before narrowing to portfolio positions
+- Cite ≥ 1 Strong source per forward-model input (revenue growth, margins, guidance)
+- Final recommendation: 6-12 positions with explicit opportunity-cost ranking
+- Each candidate must have: forward thesis + score + at least 1 kill-switch check
+
 For each candidate, run the workflow (full detail in `references/framework.md`):
 
 1. **Map the secular sub-trend** and identify the **current binding bottleneck** (compute → memory → power → software). "Time to power is the variable that matters most."
@@ -177,6 +184,10 @@ Search for the latest earnings/guidance first. Ground every claim in evidence.
 7. Define jargon on first use (see `references/glossary.md`).
 8. Output in Chinese; tickers and domain terms in English.
 9. Always end with: **仅作信息跟踪，不构成投资建议。**
+10. Grade every data point per `shared/evidence-standards.md` (Strong/Medium/Weak). Cite the source inline.
+11. A forward-model built on Weak-only evidence must be labeled `[未验证模型]` and cannot drive position sizing.
+12. Trigger red-flag disclosure (see evidence-standards) whenever applicable — especially for accounting concerns and governance issues (kill-switch candidates).
+13. Enforce arithmetic identity `Σ市值 + 现金 = 总资产` on every competition output. Re-derive cash if needed.
 
 ## Persona notes
 
