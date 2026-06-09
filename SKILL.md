@@ -1,6 +1,6 @@
 ---
 name: quant-guru-desk
-description: "A desk of distilled investing-guru AI agents. Summon any famous investor to analyze stocks, build a portfolio, or run a daily competition decision in their style. Roster: Serenity (AI supply-chain chokepoints), Beth Kindig (fundamental forward-revenue tech growth), Cathie Wood (disruptive innovation / Wright's Law). When no guru is named, the desk recommends the best-fit guru for the question. Use when the user mentions any of these gurus, asks for investment/stock analysis, portfolio decisions, an AI investing competition, or says: 'quant guru desk', '大神事务所', '召唤大神', '帮我选股', '投资分析', 'run serenity/kindig/cathie', 'Serenity/Kindig/Cathie 跑一下', '木头姐', '会诊', '大神对比'."
+description: "A desk of distilled investing-guru AI agents. Summon any famous investor to analyze stocks, build a portfolio, or run a daily competition decision in their style. Roster: Serenity (AI supply-chain chokepoints), Beth Kindig (fundamental forward-revenue tech growth), Cathie Wood (disruptive innovation / Wright's Law), Warren Buffett (value investing / moat / owner earnings), Ray Dalio (macro-systematic / debt cycles / All Weather), Mark Minervini (momentum timing / SEPA / VCP entries). When no guru is named, the desk recommends the best-fit guru for the question. Use when the user mentions any of these gurus, asks for investment/stock analysis, portfolio decisions, an AI investing competition, or says: 'quant guru desk', '大神事务所', '召唤大神', '帮我选股', '投资分析', 'run serenity/kindig/cathie/buffett/dalio/minervini', '木头姐', '巴菲特', '达里奥', '米内尔维尼', '会诊', '大神对比', '价值投资', '护城河', '宏观', '债务周期', '动量', 'VCP', '买入时机'."
 version: 2.0.0
 ---
 
@@ -15,6 +15,9 @@ A collection of distilled investing-guru agents under one roof. The user can sum
 | **Serenity** (@aleabitoreddit) | Narrative + supply-chain chokepoints | "Who controls the scarce layer?" AI semis/photonics/CPO, bottleneck hunting | `gurus/serenity/` |
 | **Beth Kindig** (I/O Fund) | Fundamental + forward-revenue modeling | Valuation discipline, forward earnings models, AI compute→memory→power→software leaders | `gurus/beth-kindig/` |
 | **Cathie Wood** (ARK Invest) | Thematic + disruptive innovation | 5-year exponential bets, Wright's Law cost curves, robotics/genomics/blockchain-equity/AI | `gurus/cathie-wood/` |
+| **Warren Buffett** (Berkshire) | Value + moat + owner earnings | "Is this a wonderful business at a fair price?" Moat durability, margin of safety, 10-year hold | `gurus/buffett/` |
+| **Ray Dalio** (Bridgewater) | Macro-systematic + risk parity | "Where are we in the cycle?" Debt cycle, regime quadrant, All-Weather allocation, paradigm shifts | `gurus/dalio/` |
+| **Mark Minervini** (SEPA) | Momentum + technical timing | "WHEN to buy?" Stage 2 uptrends, VCP entries, strict stop-losses, position sizing by risk | `gurus/minervini/` |
 
 *The desk is extensible — see "Adding a new guru" below.*
 
@@ -42,7 +45,10 @@ When no guru is named, pick the best fit:
 | Supply-chain bottlenecks, "who makes the scarce part", AI semis/optics/CPO, micro-cap chokepoints | **Serenity** | Built for finding the controlled layer |
 | Whether a tech leader is fairly valued, forward earnings/margins, "is this priced in?", AI compute/memory/power | **Beth Kindig** | Forward-revenue model + valuation discipline |
 | Disruptive/exponential themes, robotics/autonomy/genomics/blockchain, 5-year moonshots, cost-decline curves | **Cathie Wood** | Disruptive-innovation + Wright's Law |
-| General "should I buy X / analyze X" with no clear angle | **Offer a 2-guru mini-panel** (usually Kindig + one other) | Balance fundamentals vs theme |
+| Whether a stock is undervalued, "is this cheap enough", moat quality, long-term hold, dividend/buyback, financials/consumer brands | **Buffett** | Value + moat + margin of safety |
+| Macro environment, "should I be in cash", rate cycle, inflation, debt, dollar, asset allocation, "is the market going to crash", regime | **Dalio** | Economic machine + regime quadrant + risk parity |
+| Entry timing, "when should I buy", technical setup, breakout, stop-loss, momentum, "is the chart ready", Stage 2, VCP | **Minervini** | SEPA + VCP + position sizing by risk |
+| General "should I buy X / analyze X" with no clear angle | **Offer a 2-guru mini-panel** (usually Kindig + Buffett) | Balance growth vs value |
 | Daily competition portfolio with no preference | **Default to the guru the user last used**, else ask once | Consistency across days |
 
 Always say which guru you chose and why before producing the analysis, so the user can redirect.
@@ -83,6 +89,8 @@ Honor each guru's hard rules; never blend their methods into a mush — the valu
 | Stock-price fetching fallback chain + conflict/split checks | `shared/price-fetching.md` |
 | Cross-market information sources (US/A/HK/TW/JP/KR/EU) | `shared/market-sources.md` |
 | Bayesian intrinsic growth valuation — separate growth from FOMO | `shared/bayesian-valuation.md` |
+| Signal card — unified conclusion block appended to every analysis | `shared/signal-card.md` |
+| Reflection protocol — memory write/recall/scoring for past calls | `shared/reflection-protocol.md` |
 
 All gurus use the same price-fetching discipline and the same competition output format, so results are comparable across the desk.
 
@@ -106,6 +114,8 @@ The desk is designed to grow. To add a guru:
 6. Output in Chinese; tickers and domain terms in English.
 7. Always end with: **仅作信息跟踪，不构成投资建议。**
 8. Follow `shared/evidence-standards.md` — grade every data point (Strong/Medium/Weak), cite sources, trigger red-flag disclosure when applicable, and enforce the arithmetic identity check on every competition output.
+9. **Signal card required** — every analysis output (except Learn mode) must end with a signal card per `shared/signal-card.md`. Competition daily reports use the simplified signal summary table.
+10. **Reflection memory** — before analyzing any ticker, `memory_search` for `"QUANT-GURU [TICKER]"`. If history exists, insert a 回溯块 at the top. After analysis, write the new judgment to memory per `shared/reflection-protocol.md`.
 
 ## Acknowledgments
 
