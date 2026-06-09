@@ -32,7 +32,9 @@ Classify the request, then act:
 
 3. **Panel / 会诊 / 对比 / "let the gurus debate"** → run 2-3 gurus on the same question (read each SKILL.md), then output each guru's verdict side-by-side plus a consensus/divergence summary. See "Panel mode" below.
 
-4. **Competition** — user is running the AI investing competition → use the shared rules and output format in `shared/competition-rules.md`, executed in the chosen guru's voice (or panel).
+4. **Combo / 组合 / 全流程 / "选股+定时机+定仓位"** → 🧪 实验性。串联多位大师各管一段（默认 Dalio→选股大师→Minervini）。See "Combo mode" below.
+
+5. **Competition** — user is running the AI investing competition → use the shared rules and output format in `shared/competition-rules.md`, executed in the chosen guru's voice (or panel).
 
 5. **Roster / Learn** — user asks who's available, or how the desk works → show the roster table and a one-line pitch for each guru; optionally teach one guru's method. **For Learn mode, read `shared/dialogue-protocol.md` and follow the structured 5-level teaching ladder.** Never dump the full methodology at once; teach one concept per turn, use concrete examples, and always end with a question back to the user.
 
@@ -78,6 +80,85 @@ When asked for a panel or comparison:
 ```
 
 Honor each guru's hard rules; never blend their methods into a mush — the value is in the contrast.
+
+## Combo mode (组合工作流) — 🧪 实验性
+
+> 状态：实验中。欢迎反馈使用体验。
+
+Panel 模式是"同一只票多人看"，Combo 模式是"多人各管一段，串联输出一套完整决策"。
+
+### 触发
+
+用户说：
+- "帮我选股+定时机+定仓位"
+- "combo / 组合流程 / 全流程"
+- "从选股到下单全走一遍"
+- 或明确指定多位大师各自负责的环节
+
+### 默认流水线（用户未指定时）
+
+```
+Step 1 — Dalio 定环境
+→ 当前象限 + 暴露度建议 + 适合的资产类别
+
+Step 2 — Buffett 或 Kindig 选标的（取决于 Step 1）
+→ 若 Goldilocks/Reflation → Kindig（成长+估值）
+→ 若 Stagflation/Deflation → Buffett（防御+价值）
+→ 输出 3-5 个候选 ticker + 信号卡
+
+Step 3 — Minervini 定时机
+→ 对 Step 2 的候选逐一做 Stage Analysis + VCP 评估
+→ 筛掉 Stage ≠ 2 或 VCP 未就绪的
+→ 输出精确入场价/止损/仓位
+
+Step 4 — 综合信号卡
+→ 合并三步结论为一张最终决策卡
+```
+
+### 自定义流水线
+
+用户可指定任意组合，例如：
+- "Serenity 选标的 + Minervini 定时机"（两步）
+- "Dalio 看大环境 + Cathie 选颠覆标的 + Buffett 估值检验"（三步互相挑战）
+- "全员上"（6 大师各说一句 → 共识摘要）→ 退化为 Panel 模式
+
+### 输出格式
+
+```
+## 🧪 Combo 工作流 — [主题/TICKER] — [DATE]
+
+### Step 1: 宏观环境 (by Dalio)
+[象限判断 + 暴露度]
+
+### Step 2: 标的筛选 (by [选中的大师])
+[候选列表 + 各自评分]
+
+### Step 3: 入场时机 (by Minervini)
+[VCP 状态 + 通过/淘汰]
+
+### 📊 最终信号卡
+| 字段 | 值 |
+|------|-----|
+| Ticker | [最终推荐] |
+| 流水线 | Dalio→Kindig→Minervini |
+| 信心度 | [综合] |
+| 动作 | BUY / WATCH |
+| 入场价 | $ |
+| 止损 | $ |
+| 仓位 | % |
+| 宏观前提 | [如果这个前提变了，整套失效] |
+
+---
+仅作信息跟踪，不构成投资建议。
+```
+
+### 规则
+
+1. 每一步严格执行该大师自己的 SKILL.md，不跨界
+2. 后一步可以否决前一步的候选（Minervini 可以说"Kindig 选的 5 只都不在 Stage 2，全部 WATCH"）
+3. 如果流水线中某一步否决了所有标的 → 最终结论 = "当前无合格机会，保持现金"
+4. 信心度取最低分（短板决定整体信心）
+5. "宏观前提"字段标注 Dalio 步骤的关键假设 — 如果假设翻转，整套决策失效
 
 ## Shared resources
 

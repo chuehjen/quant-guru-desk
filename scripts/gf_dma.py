@@ -258,6 +258,10 @@ def calculate_health(data: dict) -> dict:
         "dma_alignment": alignment,
         "divergence": divergence,
         "trend_parallel": parallel,
+        "_raw_rev": fund.get("revenue_growth_yoy", "N/A"),
+        "_raw_gp": fund.get("gross_profit_growth_yoy", "N/A"),
+        "_raw_eps": fund.get("eps_growth_yoy", "N/A"),
+        "_raw_revision": fund.get("analyst_revision_3m", "N/A"),
     }
 
 
@@ -291,9 +295,9 @@ def generate_markdown(result: dict) -> str:
     lines.append("| Component | Growth % | Score (0-100) | Weight |")
     lines.append("|-----------|----------|---------------|--------|")
     lines.append(f"| Revenue | {result.get('_raw_rev', 'N/A')}% | {fs['revenue_score']} | 35% |")
-    lines.append(f"| Gross Profit | N/A | {fs['gross_profit_score']} | 25% |")
-    lines.append(f"| EPS | N/A | {fs['eps_score']} | 30% |")
-    lines.append(f"| Analyst Revision | N/A | {fs['revision_score']} | 10% |")
+    lines.append(f"| Gross Profit | {result.get('_raw_gp', 'N/A')}% | {fs['gross_profit_score']} | 25% |")
+    lines.append(f"| EPS | {result.get('_raw_eps', 'N/A')}% | {fs['eps_score']} | 30% |")
+    lines.append(f"| Analyst Revision | {result.get('_raw_revision', 'N/A')}% | {fs['revision_score']} | 10% |")
     lines.append(f"| **Blended** | | **{fs['blended']}** | |")
     lines.append("")
 

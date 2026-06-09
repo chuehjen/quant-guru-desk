@@ -15,6 +15,9 @@
   --accent-serenity: #8b5cf6;
   --accent-kindig: #3b82f6;
   --accent-cathie: #f59e0b;
+  --accent-buffett: #10b981;
+  --accent-dalio: #06b6d4;
+  --accent-minervini: #f43f5e;
   --positive: #10b981;
   --negative: #ef4444;
 }
@@ -31,8 +34,11 @@ h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 8px; }
 .metric-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
 .guru-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
 .guru-tag.serenity { background: rgba(139,92,246,0.2); color: var(--accent-serenity); }
-.guru-tag.kindig { background: rgba(59,130,246,0.2); color: var(--accent-kindig); }
+.guru-tag.kindig, .guru-tag.beth { background: rgba(59,130,246,0.2); color: var(--accent-kindig); }
 .guru-tag.cathie { background: rgba(245,158,11,0.2); color: var(--accent-cathie); }
+.guru-tag.buffett, .guru-tag.warren { background: rgba(16,185,129,0.2); color: var(--accent-buffett); }
+.guru-tag.dalio, .guru-tag.ray { background: rgba(6,182,212,0.2); color: var(--accent-dalio); }
+.guru-tag.minervini, .guru-tag.mark { background: rgba(244,63,94,0.2); color: var(--accent-minervini); }
 table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 500; }
 td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
@@ -55,9 +61,12 @@ button:hover { opacity: 0.9; }
 {
   "competition_start": "2026-06-03",
   "gurus": {
-    "serenity": { "daily_returns": [0, 1.2, -0.5, 2.1, 0.8], "current_value": 10450, "cash_pct": 27, "holdings_count": 5 },
-    "beth_kindig": { "daily_returns": [0, 0.8, 0.3, 1.5, 0.6], "current_value": 10320, "cash_pct": 13, "holdings_count": 6 },
-    "cathie_wood": { "daily_returns": [0, 2.1, -1.2, 3.0, -0.4], "current_value": 10355, "cash_pct": 8, "holdings_count": 12 }
+    "serenity": { "daily_returns": [0, 1.2, -0.5], "current_value": 10450, "cash_pct": 3, "holdings_count": 5 },
+    "beth_kindig": { ... },
+    "cathie_wood": { ... },
+    "buffett": { ... },
+    "dalio": { ... },
+    "minervini": { ... }
   }
 }'></textarea>
 <button onclick="renderDashboard()">Render Dashboard</button>
@@ -91,12 +100,18 @@ button:hover { opacity: 0.9; }
 const GURU_COLORS = {
   serenity: '#8b5cf6',
   beth_kindig: '#3b82f6',
-  cathie_wood: '#f59e0b'
+  cathie_wood: '#f59e0b',
+  buffett: '#10b981',
+  dalio: '#06b6d4',
+  minervini: '#f43f5e'
 };
 const GURU_NAMES = {
   serenity: 'Serenity',
   beth_kindig: 'Beth Kindig',
-  cathie_wood: 'Cathie Wood'
+  cathie_wood: 'Cathie Wood',
+  buffett: 'Warren Buffett',
+  dalio: 'Ray Dalio',
+  minervini: 'Mark Minervini'
 };
 
 let chart = null;
@@ -105,9 +120,12 @@ function loadExample() {
   const example = {
     competition_start: "2026-06-03",
     gurus: {
-      serenity: { daily_returns: [0, 1.2, -0.5, 2.1, 0.8, 1.5], current_value: 10520, cash_pct: 27, holdings_count: 5 },
-      beth_kindig: { daily_returns: [0, 0.8, 0.3, 1.5, 0.6, 0.4], current_value: 10365, cash_pct: 13, holdings_count: 6 },
-      cathie_wood: { daily_returns: [0, 2.1, -1.2, 3.0, -0.4, 1.8], current_value: 10540, cash_pct: 8, holdings_count: 12 }
+      serenity: { daily_returns: [0, 1.2, -0.5, 2.1, 0.8, 1.5], current_value: 10520, cash_pct: 3, holdings_count: 5 },
+      beth_kindig: { daily_returns: [0, 0.8, 0.3, 1.5, 0.6, 0.4], current_value: 10365, cash_pct: 9, holdings_count: 7 },
+      cathie_wood: { daily_returns: [0, 2.1, -1.2, 3.0, -0.4, 1.8], current_value: 10540, cash_pct: 12, holdings_count: 10 },
+      buffett: { daily_returns: [0, 0.3, 0.2, 0.5, 0.4, 0.3], current_value: 10170, cash_pct: 35, holdings_count: 4 },
+      dalio: { daily_returns: [0, 0.5, -0.2, 0.8, 0.1, 0.6], current_value: 10180, cash_pct: 15, holdings_count: 8 },
+      minervini: { daily_returns: [0, 3.2, -1.5, 4.0, -2.0, 2.5], current_value: 10630, cash_pct: 40, holdings_count: 3 }
     }
   };
   document.getElementById('data-input').value = JSON.stringify(example, null, 2);
@@ -130,6 +148,11 @@ function renderDashboard() {
   renderTable(data);
 }
 
+function guruTagClass(key) {
+  const map = { serenity:'serenity', beth_kindig:'beth', cathie_wood:'cathie', buffett:'buffett', dalio:'dalio', minervini:'minervini' };
+  return map[key] || key.split('_')[0];
+}
+
 function renderSummaryCards(data) {
   const container = document.getElementById('summary-cards');
   container.innerHTML = '';
@@ -138,7 +161,7 @@ function renderSummaryCards(data) {
     const isPositive = ret >= 0;
     container.innerHTML += `
       <div class="card">
-        <h3><span class="guru-tag ${key.split('_')[0]}">${GURU_NAMES[key] || key}</span></h3>
+        <h3><span class="guru-tag ${guruTagClass(key)}">${GURU_NAMES[key] || key}</span></h3>
         <div class="metric ${isPositive ? 'positive' : 'negative'}">${isPositive ? '+' : ''}${ret}%</div>
         <div class="metric-label">$${guru.current_value.toLocaleString()} / Cash: ${guru.cash_pct}%</div>
       </div>`;
@@ -192,7 +215,7 @@ function renderTable(data) {
     const isPositive = ret >= 0;
     tbody.innerHTML += `
       <tr>
-        <td><span class="guru-tag ${key.split('_')[0]}">${GURU_NAMES[key] || key}</span></td>
+        <td><span class="guru-tag ${guruTagClass(key)}">${GURU_NAMES[key] || key}</span></td>
         <td>$${guru.current_value.toLocaleString()}</td>
         <td style="color: ${isPositive ? 'var(--positive)' : 'var(--negative)'}">${isPositive ? '+' : ''}${ret}%</td>
         <td>${guru.cash_pct}%</td>
