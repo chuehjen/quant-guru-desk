@@ -138,6 +138,7 @@ def cmd_append(args: argparse.Namespace) -> int:
     record.setdefault("context", "")
     record.setdefault("stop", None)
     record.setdefault("target", None)
+    record.setdefault("prior_action_id", None)
 
     errors = validate_record(record)
     if errors:
@@ -148,6 +149,11 @@ def cmd_append(args: argparse.Namespace) -> int:
     calls = load_calls()
     if any(c["id"] == record["id"] for c in calls):
         print(f"error: duplicate id {record['id']}", file=sys.stderr)
+        return 2
+
+    prior_id = record.get("prior_action_id")
+    if prior_id and not any(c["id"] == prior_id for c in calls):
+        print(f"error: prior_action_id {prior_id!r} not found in calls.json", file=sys.stderr)
         return 2
 
     calls.append(record)
@@ -200,6 +206,9 @@ class PriceLookup:
 # ---------- Grading -----------------------------------------------------------
 
 
+SPY_BENCHMARK = "SPY"
+
+
 def compute_verdict(action: str, move_pct: float) -> str:
     if action == "BUY":
         if move_pct >= 10:
@@ -246,6 +255,18 @@ def grade_one(call: dict, horizon_days: int, lookup: PriceLookup) -> dict | None
             "verdict": "unscorable",
             "reasoning": "macro regime calls are tracked qualitatively only",
         }
+
+    # First-time HOLD with no prior BUY reference is unscorable — HOLD means
+    # "maintain prior judgment", so its grade should attach to that prior call.
+    if call["action"] == "HOLD" and not call.get("prior_action_id"):
+        return {
+            "scored_at": datetime.now(timezone.utc).isoformat(),
+            "price_then": None,
+            "move_pct": None,
+            "verdict": "unscorable",
+            "reasoning": "HOLD without prior_action_id — first-time HOLD is unscorable; reference the originating BUY/SELL call",
+        }
+
     entry = call.get("entry")
     if entry in (None, "") or not isinstance(entry, (int, float)) or entry <= 0:
         return {
@@ -287,10 +308,28 @@ def grade_one(call: dict, horizon_days: int, lookup: PriceLookup) -> dict | None
     else:
         reasoning = f"{call['action']} @{entry:.2f}, {move_pct:+.2f}% over {horizon_days}d (threshold per schema)"
 
+    # SPY benchmark — same horizon, alpha = call_move_pct - spy_move_pct.
+    # Skip benchmark for the SPY ticker itself.
+    spy_move_pct = None
+    alpha = None
+    spy_note = None
+    if call["ticker"].upper() != SPY_BENCHMARK:
+        spy_entry, spy_entry_info = lookup.close_on_or_before(SPY_BENCHMARK, created)
+        spy_close, spy_close_info = lookup.close_on_or_before(SPY_BENCHMARK, target_date)
+        if spy_entry and spy_close:
+            spy_move_pct = round((spy_close - spy_entry) / spy_entry * 100, 2)
+            alpha = round(move_pct - spy_move_pct, 2)
+            spy_note = f"SPY {spy_move_pct:+.2f}% same window, alpha={alpha:+.2f}%"
+        else:
+            spy_note = f"SPY benchmark unavailable ({spy_entry_info or 'no entry'} / {spy_close_info or 'no close'})"
+        reasoning = f"{reasoning} · {spy_note}"
+
     return {
         "scored_at": datetime.now(timezone.utc).isoformat(),
         "price_then": close,
         "move_pct": move_pct,
+        "spy_move_pct": spy_move_pct,
+        "alpha": alpha,
         "verdict": verdict,
         "reasoning": reasoning,
         "actual_date": info,
@@ -346,14 +385,18 @@ def compute_summary(calls: list[dict], guru_filter: str | None = None) -> dict:
               "total": int,
               "correct": int, "wrong": int, "neutral": int,
               "unscorable": int, "pending": int,
-              "decided": int,                # correct + wrong
-              "hit_rate": float | null,      # null when decided==0
-              "weighted_score": int,         # +conv on correct, -conv on wrong
-              "avg_move_pct": float | null,  # over decided calls only
+              "decided": int,                 # correct + wrong
+              "hit_rate": float | null,       # null when decided==0
+              "weighted_score": int,          # +conv on correct, -conv on wrong
+              "avg_move_pct": float | null,   # average ticker move on graded calls
+              "avg_alpha": float | null,      # average (ticker_move - SPY_move)
+              "beat_spy_count": int,          # graded calls where alpha > 0
+              "beat_spy_total": int,          # graded calls with alpha computed
+              "beat_spy_rate": float | null,  # beat_spy_count / beat_spy_total
             },
             ...
           ],
-          "best": [ {guru, ticker, action, conviction, move_pct, reasoning, created_at}, ... ],
+          "best": [ {guru, ticker, action, conviction, move_pct, spy_move_pct, alpha, reasoning, created_at}, ... ],
           "worst": [ ... ],
           "pending_tail": [ ... ]            # last 10 pending
         }
@@ -363,7 +406,7 @@ def compute_summary(calls: list[dict], guru_filter: str | None = None) -> dict:
 
     Stat = lambda: {
         "total": 0, "correct": 0, "wrong": 0, "neutral": 0,
-        "unscorable": 0, "pending": 0, "weighted": 0, "moves": [],
+        "unscorable": 0, "pending": 0, "weighted": 0, "moves": [], "alphas": [],
     }
     per_guru: dict[str, dict] = defaultdict(Stat)
     scored_pool: list[tuple[dict, dict]] = []
@@ -382,6 +425,9 @@ def compute_summary(calls: list[dict], guru_filter: str | None = None) -> dict:
         move = graded.get("move_pct")
         if isinstance(move, (int, float)):
             s["moves"].append(move)
+        alpha = graded.get("alpha")
+        if isinstance(alpha, (int, float)):
+            s["alphas"].append(alpha)
         if verdict == "correct":
             s["weighted"] += call["conviction"]
             scored_pool.append((call, graded))
@@ -394,6 +440,9 @@ def compute_summary(calls: list[dict], guru_filter: str | None = None) -> dict:
         decided = s["correct"] + s["wrong"]
         hit_rate = (s["correct"] / decided) if decided else None
         avg_move = (sum(s["moves"]) / len(s["moves"])) if s["moves"] else None
+        avg_alpha = (sum(s["alphas"]) / len(s["alphas"])) if s["alphas"] else None
+        beat_spy = sum(1 for a in s["alphas"] if a > 0)
+        beat_spy_rate = (beat_spy / len(s["alphas"])) if s["alphas"] else None
         gurus_out.append({
             "guru": guru,
             "total": s["total"],
@@ -406,6 +455,10 @@ def compute_summary(calls: list[dict], guru_filter: str | None = None) -> dict:
             "hit_rate": hit_rate,
             "weighted_score": s["weighted"],
             "avg_move_pct": avg_move,
+            "avg_alpha": avg_alpha,
+            "beat_spy_count": beat_spy,
+            "beat_spy_total": len(s["alphas"]),
+            "beat_spy_rate": beat_spy_rate,
         })
 
     def _pack(call: dict, graded: dict) -> dict:
@@ -415,6 +468,8 @@ def compute_summary(calls: list[dict], guru_filter: str | None = None) -> dict:
             "action": call["action"],
             "conviction": call["conviction"],
             "move_pct": graded.get("move_pct"),
+            "spy_move_pct": graded.get("spy_move_pct"),
+            "alpha": graded.get("alpha"),
             "reasoning": graded.get("reasoning", ""),
             "created_at": call.get("created_at", ""),
             "verdict": graded.get("verdict"),
@@ -459,12 +514,17 @@ def cmd_summary(args: argparse.Namespace) -> int:
 
     # text rendering — preserves the original CLI shape
     print("\n📊 Quant Guru Desk — batting average\n")
-    print(f"{'Guru':<18} {'total':>6} {'✅':>4} {'❌':>4} {'~':>4} {'?':>4} {'hit-rate':>10} {'weighted':>10} {'pending':>8}")
-    print("-" * 72)
+    print(f"{'Guru':<14} {'total':>5} {'✅':>3} {'❌':>3} {'~':>3} {'?':>3} {'hit-rate':>9} {'weighted':>9} {'avg α':>8} {'beat SPY':>10} {'pending':>8}")
+    print("-" * 90)
     for row in summary["gurus"]:
-        hr = f"{row['hit_rate'] * 100:5.1f}%" if row["hit_rate"] is not None else "  n/a "
+        hr = f"{row['hit_rate'] * 100:5.1f}%" if row["hit_rate"] is not None else "  n/a"
+        alpha = f"{row['avg_alpha']:+6.2f}%" if row["avg_alpha"] is not None else "   n/a"
+        if row["beat_spy_rate"] is not None:
+            beat = f"{row['beat_spy_count']}/{row['beat_spy_total']} ({row['beat_spy_rate']*100:.0f}%)"
+        else:
+            beat = "n/a"
         print(
-            f"{row['guru']:<18} {row['total']:>6} {row['correct']:>4} {row['wrong']:>4} {row['neutral']:>4} {row['unscorable']:>4} {hr:>10} {row['weighted_score']:>+10} {row['pending']:>8}"
+            f"{row['guru']:<14} {row['total']:>5} {row['correct']:>3} {row['wrong']:>3} {row['neutral']:>3} {row['unscorable']:>3} {hr:>9} {row['weighted_score']:>+9} {alpha:>8} {beat:>10} {row['pending']:>8}"
         )
 
     if summary["best"]:

@@ -180,7 +180,7 @@ function computeSummary(calls) {
   const scoredPool = [];
   const pending = [];
   for (const c of calls) {
-    if (!stats[c.guru]) stats[c.guru] = { guru: c.guru, total: 0, correct: 0, wrong: 0, neutral: 0, unscorable: 0, pending: 0, weighted: 0, moves: [] };
+    if (!stats[c.guru]) stats[c.guru] = { guru: c.guru, total: 0, correct: 0, wrong: 0, neutral: 0, unscorable: 0, pending: 0, weighted: 0, moves: [], alphas: [] };
     const s = stats[c.guru];
     s.total++;
     const graded = c.scored_90d || c.scored_30d;
@@ -189,6 +189,7 @@ function computeSummary(calls) {
     if (s[v] === undefined) s[v] = 0;
     s[v]++;
     if (typeof graded.move_pct === 'number') s.moves.push(graded.move_pct);
+    if (typeof graded.alpha === 'number') s.alphas.push(graded.alpha);
     if (v === 'correct') { s.weighted += c.conviction; scoredPool.push([c, graded]); }
     else if (v === 'wrong') { s.weighted -= c.conviction; scoredPool.push([c, graded]); }
   }
@@ -198,8 +199,12 @@ function computeSummary(calls) {
     g.decided = decided;
     g.hit_rate = decided ? g.correct / decided : null;
     g.avg_move_pct = g.moves.length ? g.moves.reduce((a, b) => a + b, 0) / g.moves.length : null;
+    g.avg_alpha = g.alphas.length ? g.alphas.reduce((a, b) => a + b, 0) / g.alphas.length : null;
+    g.beat_spy_count = g.alphas.filter(a => a > 0).length;
+    g.beat_spy_total = g.alphas.length;
+    g.beat_spy_rate = g.alphas.length ? g.beat_spy_count / g.alphas.length : null;
   }
-  const pack = ([c, g]) => ({ guru: c.guru, ticker: c.ticker, action: c.action, conviction: c.conviction, move_pct: g.move_pct, reasoning: g.reasoning || '', verdict: g.verdict, created_at: c.created_at || '' });
+  const pack = ([c, g]) => ({ guru: c.guru, ticker: c.ticker, action: c.action, conviction: c.conviction, move_pct: g.move_pct, spy_move_pct: g.spy_move_pct, alpha: g.alpha, reasoning: g.reasoning || '', verdict: g.verdict, created_at: c.created_at || '' });
   const best = scoredPool.filter(([_, g]) => g.verdict === 'correct').sort((a, b) => b[0].conviction - a[0].conviction).slice(0, 3).map(pack);
   const worst = scoredPool.filter(([_, g]) => g.verdict === 'wrong').sort((a, b) => b[0].conviction - a[0].conviction).slice(0, 3).map(pack);
   return { total_calls: calls.length, gurus, best, worst, pending_count: pending.length };
@@ -245,11 +250,19 @@ function renderBattingCards(summary) {
     const weightedSign = g.weighted_score === undefined ? (g.weighted >= 0 ? '+' : '') : (g.weighted_score >= 0 ? '+' : '');
     const weightedVal = g.weighted_score === undefined ? g.weighted : g.weighted_score;
     const avgMove = g.avg_move_pct === null ? '—' : `${g.avg_move_pct >= 0 ? '+' : ''}${g.avg_move_pct.toFixed(1)}%`;
+    const alphaCls = g.avg_alpha === null ? 'neutral' : (g.avg_alpha > 0 ? 'positive' : 'negative');
+    const alphaStr = g.avg_alpha === null ? '— ' : `${g.avg_alpha >= 0 ? '+' : ''}${g.avg_alpha.toFixed(1)}%`;
+    const beatStr = g.beat_spy_rate === null ? 'n/a' : `${g.beat_spy_count}/${g.beat_spy_total} (${(g.beat_spy_rate * 100).toFixed(0)}%)`;
     container.innerHTML += `
       <div class="card">
         <h3><span class="guru-tag ${guruTagClass(g.guru)}">${GURU_NAMES[g.guru] || g.guru}</span></h3>
         <div class="metric ${cls}">${hr}</div>
         <div class="metric-label">命中率 · ${g.correct}✅ / ${g.wrong}❌ / ${g.decided} decided · ${g.pending} pending</div>
+        <div class="summary-line" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+          <span style="display:inline-block; min-width:62px;">vs SPY:</span>
+          <span class="num ${alphaCls === 'positive' ? 'positive' : (alphaCls === 'negative' ? 'negative' : '')}" style="color: ${alphaCls === 'positive' ? 'var(--positive)' : (alphaCls === 'negative' ? 'var(--negative)' : 'var(--neutral)')};">${alphaStr}</span>
+          <span style="color:var(--muted);"> avg α · 跑赢 ${beatStr}</span>
+        </div>
         <div class="summary-line">
           加权分: <span class="num">${weightedSign}${weightedVal}</span> ·
           平均涨幅: <span class="num">${avgMove}</span> ·
@@ -266,6 +279,14 @@ function renderBestWorst(summary) {
     el.innerHTML = list.map(r => {
       const sign = (r.move_pct ?? 0) >= 0 ? 'positive' : 'negative';
       const moveStr = r.move_pct === null || r.move_pct === undefined ? '—' : `${r.move_pct >= 0 ? '+' : ''}${r.move_pct.toFixed(1)}%`;
+      let alphaPill = '';
+      if (typeof r.alpha === 'number') {
+        const aSign = r.alpha >= 0 ? 'positive' : 'negative';
+        const spyStr = typeof r.spy_move_pct === 'number'
+          ? ` (SPY ${r.spy_move_pct >= 0 ? '+' : ''}${r.spy_move_pct.toFixed(1)}%)`
+          : '';
+        alphaPill = `<span class="move ${aSign}" style="margin-left:6px; font-size:11px; opacity:0.85;">α ${r.alpha >= 0 ? '+' : ''}${r.alpha.toFixed(1)}%${spyStr}</span>`;
+      }
       return `
         <div class="row" style="padding:8px 0; border-bottom:1px solid var(--border);">
           <span class="guru-tag ${guruTagClass(r.guru)}">${GURU_NAMES[r.guru] || r.guru}</span>
@@ -273,6 +294,7 @@ function renderBestWorst(summary) {
           <span class="action-pill ${r.action}">${r.action}</span>
           <span class="conv-pill">conv=${r.conviction}</span>
           <span class="move ${sign}">${moveStr}</span>
+          ${alphaPill}
         </div>
         <div class="reason" style="margin-bottom:8px;">${r.reasoning || ''}</div>
       `;

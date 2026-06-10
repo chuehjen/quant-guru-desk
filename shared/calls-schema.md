@@ -52,6 +52,7 @@ Every signal card emits exactly one record:
   "context": "Market Stage 2, AI capex cycle intact",
   "competition_run": false,
   "panel_id": null,
+  "prior_action_id": null,
   "scored_30d": null,
   "scored_90d": null
 }
@@ -75,6 +76,7 @@ Every signal card emits exactly one record:
 | `context` | string | optional | Macro/structural context one liner. |
 | `competition_run` | boolean | yes | True if the call came from the daily AI investing competition (separates serious calls from the competition's forced-rebalance noise). |
 | `panel_id` | string \| null | optional | If part of a panel verdict, the panel UUID. Lets `summary` group by panel. |
+| `prior_action_id` | string \| null | optional | When `action == "HOLD"`, the `id` of the originating BUY/SELL call this HOLD is reaffirming. A first-time HOLD with no prior_action_id is `unscorable`: HOLD reuses the prior call's grade rather than creating a new one. The grader rejects an `append` whose `prior_action_id` does not exist in `calls.json`. |
 | `scored_30d` | object \| null | written by grader | See below. |
 | `scored_90d` | object \| null | written by grader | See below. |
 
@@ -88,11 +90,20 @@ After the horizon elapses, `track_calls.py score` fills in:
     "scored_at": "2026-07-09T00:00:00+00:00",
     "price_then": 215.40,
     "move_pct": 5.02,
+    "spy_move_pct": 1.80,
+    "alpha": 3.22,
     "verdict": "neutral",
-    "reasoning": "BUY @205.10, +5.0% over 30d (threshold ±10%)"
+    "reasoning": "BUY @205.10, +5.02% over 30d (threshold per schema) · SPY +1.80% same window, alpha=+3.22%"
   }
 }
 ```
+
+`spy_move_pct` and `alpha` measure the call against the SPY benchmark over the same window:
+
+- `spy_move_pct` = `(SPY_close_at_horizon - SPY_close_at_entry) / SPY_close_at_entry × 100`
+- `alpha` = `move_pct − spy_move_pct`
+
+A 60% hit rate that consistently runs at negative alpha is a guru who picks winners but underperforms the index — the call may be `correct` per verdict rules, yet the user would have done better holding SPY. Tracking `alpha` keeps the desk honest about the value it actually adds. SPY's own calls skip the benchmark (would be tautological).
 
 #### Verdict rules (deterministic)
 
