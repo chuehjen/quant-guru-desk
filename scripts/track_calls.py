@@ -333,25 +333,45 @@ def cmd_score(args: argparse.Namespace) -> int:
 # ---------- Summary -----------------------------------------------------------
 
 
-def cmd_summary(args: argparse.Namespace) -> int:
-    calls = load_calls()
-    if args.guru:
-        calls = [c for c in calls if c["guru"] == args.guru]
-    if not calls:
-        print("no calls recorded yet")
-        return 0
+def compute_summary(calls: list[dict], guru_filter: str | None = None) -> dict:
+    """Aggregate calls into a structured summary dict.
 
-    # build per-guru aggregates
-    Stat = lambda: {"total": 0, "correct": 0, "wrong": 0, "neutral": 0, "unscorable": 0, "weighted": 0, "pending": 0}
+    Output shape (stable; consumed by dashboard/index.html):
+        {
+          "as_of": "2026-06-10T...",
+          "total_calls": int,
+          "gurus": [
+            {
+              "guru": "minervini",
+              "total": int,
+              "correct": int, "wrong": int, "neutral": int,
+              "unscorable": int, "pending": int,
+              "decided": int,                # correct + wrong
+              "hit_rate": float | null,      # null when decided==0
+              "weighted_score": int,         # +conv on correct, -conv on wrong
+              "avg_move_pct": float | null,  # over decided calls only
+            },
+            ...
+          ],
+          "best": [ {guru, ticker, action, conviction, move_pct, reasoning, created_at}, ... ],
+          "worst": [ ... ],
+          "pending_tail": [ ... ]            # last 10 pending
+        }
+    """
+    if guru_filter:
+        calls = [c for c in calls if c["guru"] == guru_filter]
+
+    Stat = lambda: {
+        "total": 0, "correct": 0, "wrong": 0, "neutral": 0,
+        "unscorable": 0, "pending": 0, "weighted": 0, "moves": [],
+    }
     per_guru: dict[str, dict] = defaultdict(Stat)
-
     scored_pool: list[tuple[dict, dict]] = []
     pending: list[dict] = []
 
     for call in calls:
         s = per_guru[call["guru"]]
         s["total"] += 1
-        # prefer 90d verdict if available, else 30d
         graded = call.get("scored_90d") or call.get("scored_30d")
         if not graded:
             s["pending"] += 1
@@ -359,6 +379,9 @@ def cmd_summary(args: argparse.Namespace) -> int:
             continue
         verdict = graded.get("verdict", "unscorable")
         s[verdict] = s.get(verdict, 0) + 1
+        move = graded.get("move_pct")
+        if isinstance(move, (int, float)):
+            s["moves"].append(move)
         if verdict == "correct":
             s["weighted"] += call["conviction"]
             scored_pool.append((call, graded))
@@ -366,40 +389,98 @@ def cmd_summary(args: argparse.Namespace) -> int:
             s["weighted"] -= call["conviction"]
             scored_pool.append((call, graded))
 
-    # per-guru table
+    gurus_out = []
+    for guru, s in sorted(per_guru.items()):
+        decided = s["correct"] + s["wrong"]
+        hit_rate = (s["correct"] / decided) if decided else None
+        avg_move = (sum(s["moves"]) / len(s["moves"])) if s["moves"] else None
+        gurus_out.append({
+            "guru": guru,
+            "total": s["total"],
+            "correct": s["correct"],
+            "wrong": s["wrong"],
+            "neutral": s["neutral"],
+            "unscorable": s["unscorable"],
+            "pending": s["pending"],
+            "decided": decided,
+            "hit_rate": hit_rate,
+            "weighted_score": s["weighted"],
+            "avg_move_pct": avg_move,
+        })
+
+    def _pack(call: dict, graded: dict) -> dict:
+        return {
+            "guru": call["guru"],
+            "ticker": call["ticker"],
+            "action": call["action"],
+            "conviction": call["conviction"],
+            "move_pct": graded.get("move_pct"),
+            "reasoning": graded.get("reasoning", ""),
+            "created_at": call.get("created_at", ""),
+            "verdict": graded.get("verdict"),
+        }
+
+    best_pool = [(c, g) for c, g in scored_pool if g["verdict"] == "correct"]
+    worst_pool = [(c, g) for c, g in scored_pool if g["verdict"] == "wrong"]
+    best_pool.sort(key=lambda cw: cw[0]["conviction"], reverse=True)
+    worst_pool.sort(key=lambda cw: cw[0]["conviction"], reverse=True)
+
+    return {
+        "as_of": datetime.now(timezone.utc).isoformat(),
+        "total_calls": len(calls),
+        "gurus": gurus_out,
+        "best": [_pack(c, g) for c, g in best_pool[:3]],
+        "worst": [_pack(c, g) for c, g in worst_pool[:3]],
+        "pending_tail": [
+            {
+                "guru": c["guru"], "ticker": c["ticker"], "action": c["action"],
+                "conviction": c["conviction"], "horizon_days": c["horizon_days"],
+                "created_at": c.get("created_at", ""),
+            }
+            for c in pending[-10:]
+        ],
+    }
+
+
+def cmd_summary(args: argparse.Namespace) -> int:
+    calls = load_calls()
+    if not calls:
+        if args.json:
+            print(json.dumps({"as_of": datetime.now(timezone.utc).isoformat(), "total_calls": 0, "gurus": [], "best": [], "worst": [], "pending_tail": []}, ensure_ascii=False, indent=2))
+        else:
+            print("no calls recorded yet")
+        return 0
+
+    summary = compute_summary(calls, guru_filter=args.guru)
+
+    if args.json:
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0
+
+    # text rendering — preserves the original CLI shape
     print("\n📊 Quant Guru Desk — batting average\n")
     print(f"{'Guru':<18} {'total':>6} {'✅':>4} {'❌':>4} {'~':>4} {'?':>4} {'hit-rate':>10} {'weighted':>10} {'pending':>8}")
     print("-" * 72)
-    for guru, s in sorted(per_guru.items()):
-        decided = s["correct"] + s["wrong"]
-        hit_rate = f"{s['correct'] / decided * 100:5.1f}%" if decided else "  n/a "
+    for row in summary["gurus"]:
+        hr = f"{row['hit_rate'] * 100:5.1f}%" if row["hit_rate"] is not None else "  n/a "
         print(
-            f"{guru:<18} {s['total']:>6} {s['correct']:>4} {s['wrong']:>4} {s['neutral']:>4} {s['unscorable']:>4} {hit_rate:>10} {s['weighted']:>+10} {s['pending']:>8}"
+            f"{row['guru']:<18} {row['total']:>6} {row['correct']:>4} {row['wrong']:>4} {row['neutral']:>4} {row['unscorable']:>4} {hr:>10} {row['weighted_score']:>+10} {row['pending']:>8}"
         )
 
-    # best / worst
-    if scored_pool:
-        scored_pool.sort(key=lambda cw: (cw[0]["conviction"] if cw[1]["verdict"] == "correct" else -cw[0]["conviction"]), reverse=True)
-        best = [cw for cw in scored_pool if cw[1]["verdict"] == "correct"][:3]
-        worst = [cw for cw in scored_pool if cw[1]["verdict"] == "wrong"]
-        worst.sort(key=lambda cw: cw[0]["conviction"], reverse=True)
-        worst = worst[:3]
+    if summary["best"]:
+        print("\n🏆 best calls (by conviction-weighted impact):")
+        for r in summary["best"]:
+            print(f"  {r['guru']:<10} {r['ticker']:<6} {r['action']:<5} conv={r['conviction']}  {r['reasoning']}")
 
-        if best:
-            print("\n🏆 best calls (by conviction-weighted impact):")
-            for c, g in best:
-                print(f"  {c['guru']:<10} {c['ticker']:<6} {c['action']:<5} conv={c['conviction']}  {g['reasoning']}")
+    if summary["worst"]:
+        print("\n💀 worst calls (errors are the most valuable signal):")
+        for r in summary["worst"]:
+            print(f"  {r['guru']:<10} {r['ticker']:<6} {r['action']:<5} conv={r['conviction']}  {r['reasoning']}")
 
-        if worst:
-            print("\n💀 worst calls (errors are the most valuable signal):")
-            for c, g in worst:
-                print(f"  {c['guru']:<10} {c['ticker']:<6} {c['action']:<5} conv={c['conviction']}  {g['reasoning']}")
-
-    # pending tail
-    if pending and args.show_pending:
-        print(f"\n⏳ pending ({len(pending)}):")
-        for c in pending[-10:]:
-            print(f"  {c['created_at'][:10]} {c['guru']:<10} {c['ticker']:<6} {c['action']:<5} conv={c['conviction']}  horizon={c['horizon_days']}d")
+    if summary["pending_tail"] and args.show_pending:
+        print(f"\n⏳ pending ({len(summary['pending_tail'])}):")
+        for r in summary["pending_tail"]:
+            print(f"  {r['created_at'][:10]} {r['guru']:<10} {r['ticker']:<6} {r['action']:<5} conv={r['conviction']}  horizon={r['horizon_days']}d")
 
     return 0
 
@@ -447,6 +528,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_summary = sub.add_parser("summary", help="print the desk's batting average")
     p_summary.add_argument("--guru", help="filter to a single guru")
     p_summary.add_argument("--show-pending", action="store_true", help="also list pending tail")
+    p_summary.add_argument("--json", action="store_true", help="emit structured JSON for dashboard consumption")
     p_summary.set_defaults(func=cmd_summary)
 
     p_list = sub.add_parser("list", help="list recent calls")

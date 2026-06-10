@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quant Guru Desk — Competition Dashboard</title>
+<title>Quant Guru Desk — Batting Average + Competition</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
   --bg: #0f1419;
   --surface: #1a2332;
+  --surface-2: #131a26;
   --border: #2d3748;
   --text: #e2e8f0;
   --muted: #718096;
@@ -18,107 +19,302 @@
   --accent-buffett: #10b981;
   --accent-dalio: #06b6d4;
   --accent-minervini: #f43f5e;
+  --accent-panel: #94a3b8;
   --positive: #10b981;
   --negative: #ef4444;
+  --neutral: #94a3b8;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif; background: var(--bg); color: var(--text); padding: 24px; line-height: 1.6; }
-h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 8px; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); padding: 24px; line-height: 1.6; max-width: 1280px; margin: 0 auto; }
+h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; }
+h2 { font-size: 1.125rem; font-weight: 600; margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 .subtitle { color: var(--muted); font-size: 0.875rem; margin-bottom: 24px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-.card h3 { font-size: 0.875rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
-.metric { font-size: 2rem; font-weight: 700; }
+.section-meta { color: var(--muted); font-size: 0.75rem; margin-bottom: 16px; }
+.grid { display: grid; gap: 16px; margin-bottom: 16px; }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.card h3 { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; font-weight: 500; }
+.metric { font-size: 1.875rem; font-weight: 700; line-height: 1.1; }
 .metric.positive { color: var(--positive); }
 .metric.negative { color: var(--negative); }
+.metric.neutral { color: var(--neutral); }
 .metric-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
-.guru-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-.guru-tag.serenity { background: rgba(139,92,246,0.2); color: var(--accent-serenity); }
-.guru-tag.kindig, .guru-tag.beth { background: rgba(59,130,246,0.2); color: var(--accent-kindig); }
-.guru-tag.cathie { background: rgba(245,158,11,0.2); color: var(--accent-cathie); }
-.guru-tag.buffett, .guru-tag.warren { background: rgba(16,185,129,0.2); color: var(--accent-buffett); }
-.guru-tag.dalio, .guru-tag.ray { background: rgba(6,182,212,0.2); color: var(--accent-dalio); }
-.guru-tag.minervini, .guru-tag.mark { background: rgba(244,63,94,0.2); color: var(--accent-minervini); }
+.guru-tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.guru-tag.serenity { background: rgba(139,92,246,0.15); color: var(--accent-serenity); }
+.guru-tag.kindig { background: rgba(59,130,246,0.15); color: var(--accent-kindig); }
+.guru-tag.cathie { background: rgba(245,158,11,0.15); color: var(--accent-cathie); }
+.guru-tag.buffett { background: rgba(16,185,129,0.15); color: var(--accent-buffett); }
+.guru-tag.dalio { background: rgba(6,182,212,0.15); color: var(--accent-dalio); }
+.guru-tag.minervini { background: rgba(244,63,94,0.15); color: var(--accent-minervini); }
+.guru-tag.panel-consensus { background: rgba(148,163,184,0.15); color: var(--accent-panel); }
 table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 500; }
-td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
 .chart-container { position: relative; height: 300px; margin-top: 16px; }
-.holdings-section { margin-top: 24px; }
 .disclaimer { margin-top: 32px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--muted); text-align: center; }
-#data-input { width: 100%; min-height: 200px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 12px; font-family: monospace; font-size: 0.8rem; margin-bottom: 12px; }
-button { background: var(--accent-kindig); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+.empty { padding: 32px; text-align: center; color: var(--muted); font-size: 0.875rem; }
+.error { padding: 16px; border: 1px solid var(--negative); border-radius: 8px; color: var(--negative); font-size: 0.875rem; margin-bottom: 16px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.row > .ticker { font-family: 'SF Mono', monospace; font-weight: 600; }
+.row > .move { font-weight: 600; }
+.row > .move.positive { color: var(--positive); }
+.row > .move.negative { color: var(--negative); }
+.conv-pill { display: inline-block; padding: 1px 6px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); font-size: 0.7rem; color: var(--muted); }
+.action-pill { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+.action-pill.BUY { background: rgba(16,185,129,0.15); color: var(--positive); }
+.action-pill.SELL { background: rgba(239,68,68,0.15); color: var(--negative); }
+.action-pill.HOLD { background: rgba(148,163,184,0.15); color: var(--neutral); }
+.action-pill.WATCH { background: rgba(6,182,212,0.15); color: var(--accent-dalio); }
+.action-pill.AVOID { background: rgba(244,63,94,0.15); color: var(--accent-minervini); }
+.reason { color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+#data-input { width: 100%; min-height: 160px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 12px; font-family: 'SF Mono', monospace; font-size: 0.8rem; margin-bottom: 12px; resize: vertical; }
+button { background: var(--accent-kindig); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem; }
 button:hover { opacity: 0.9; }
-.input-section { margin-bottom: 24px; }
+button.secondary { background: var(--border); }
+.summary-line { font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+.summary-line .num { color: var(--text); font-weight: 600; }
+.refresh-btn { float: right; font-size: 0.75rem; padding: 4px 10px; }
 </style>
 </head>
 <body>
 
-<h1>Quant Guru Desk — Competition Dashboard</h1>
-<p class="subtitle">Paste competition JSON data below to visualize portfolio performance across gurus.</p>
+<h1>Quant Guru Desk — Dashboard</h1>
+<p class="subtitle">六位大师的历史命中率 + 投资竞赛追踪。仅作信息跟踪，不构成投资建议。</p>
 
-<div class="input-section">
-<textarea id="data-input" placeholder='Paste JSON here. Format:
-{
-  "competition_start": "2026-06-03",
-  "gurus": {
-    "serenity": { "daily_returns": [0, 1.2, -0.5], "current_value": 10450, "cash_pct": 3, "holdings_count": 5 },
-    "beth_kindig": { ... },
-    "cathie_wood": { ... },
-    "buffett": { ... },
-    "dalio": { ... },
-    "minervini": { ... }
-  }
-}'></textarea>
-<button onclick="renderDashboard()">Render Dashboard</button>
-<button onclick="loadExample()" style="margin-left: 8px; background: var(--border);">Load Example</button>
+<h2>📊 战绩榜 · Batting Average <button class="refresh-btn secondary" onclick="loadBattingBoard()">刷新</button></h2>
+<p class="section-meta" id="batting-meta">从 <code>../calls.json</code> 自动加载…</p>
+
+<div id="batting-error" class="error" style="display:none;"></div>
+
+<div id="batting-empty" class="empty" style="display:none;">
+  尚无可用 call 记录。<br>
+  使用 <code>python3 scripts/track_calls.py append</code> 写入第一条信号，或运行 <code>track_calls.py score</code> 让历史 call 完成 30/90 天的评分。
 </div>
 
-<div id="dashboard" style="display:none;">
-<div class="grid" id="summary-cards"></div>
+<div id="batting-content" style="display:none;">
+  <div class="grid grid-3" id="batting-cards"></div>
 
-<div class="card">
-<h3>Cumulative Return (%)</h3>
-<div class="chart-container">
-<canvas id="returnChart"></canvas>
-</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>🏆 best calls — by conviction-weighted impact</h3>
+      <div id="best-calls"></div>
+    </div>
+    <div class="card">
+      <h3>💀 worst calls — errors are the most valuable signal</h3>
+      <div id="worst-calls"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h3>命中率对比 (hit rate %)</h3>
+    <div class="chart-container"><canvas id="hitRateChart"></canvas></div>
+  </div>
 </div>
 
-<div class="holdings-section card">
-<h3>Current Snapshot</h3>
-<table id="snapshot-table">
-<thead><tr><th>Guru</th><th>Portfolio Value</th><th>Return</th><th>Cash %</th><th>Holdings</th></tr></thead>
-<tbody></tbody>
-</table>
-</div>
+<h2>🏁 投资竞赛追踪 · Competition Tracker</h2>
+<p class="section-meta">粘贴竞赛 JSON 数据查看组合表现。这部分独立于战绩榜，用于多智能体组合 PK 场景。</p>
+
+<textarea id="data-input" placeholder='{"competition_start":"2026-06-03","gurus":{"serenity":{"daily_returns":[0,1.2,-0.5],"current_value":10450,"cash_pct":3,"holdings_count":5}, ...}}'></textarea>
+<button onclick="renderCompetition()">渲染竞赛看板</button>
+<button class="secondary" onclick="loadExample()" style="margin-left:8px;">载入示例</button>
+
+<div id="competition" style="display:none; margin-top:24px;">
+  <div class="grid grid-3" id="comp-summary-cards"></div>
+  <div class="card">
+    <h3>累计收益 (%)</h3>
+    <div class="chart-container"><canvas id="returnChart"></canvas></div>
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <h3>当前快照</h3>
+    <table id="snapshot-table">
+      <thead><tr><th>Guru</th><th>组合估值</th><th>收益</th><th>现金占比</th><th>持仓数</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </div>
 
 <div class="disclaimer">
-仅作信息跟踪，不构成投资建议。Quant Guru Desk is for research and information tracking only.
+仅作信息跟踪，不构成投资建议。Quant Guru Desk is for research and information tracking only.<br>
+战绩榜数据来源：<code>calls.json</code>（每张 signal card 都会被 <code>track_calls.py append</code> 写入并由 <code>track_calls.py score</code> 30/90 天后用 Twelve Data 真实收盘价确定性打分）。
 </div>
 
 <script>
 const GURU_COLORS = {
-  serenity: '#8b5cf6',
-  beth_kindig: '#3b82f6',
-  cathie_wood: '#f59e0b',
   buffett: '#10b981',
   dalio: '#06b6d4',
-  minervini: '#f43f5e'
+  kindig: '#3b82f6',
+  cathie: '#f59e0b',
+  serenity: '#8b5cf6',
+  minervini: '#f43f5e',
+  'panel-consensus': '#94a3b8',
+  // backward-compat keys for competition section
+  beth_kindig: '#3b82f6',
+  cathie_wood: '#f59e0b'
 };
 const GURU_NAMES = {
-  serenity: 'Serenity',
-  beth_kindig: 'Beth Kindig',
-  cathie_wood: 'Cathie Wood',
   buffett: 'Warren Buffett',
   dalio: 'Ray Dalio',
-  minervini: 'Mark Minervini'
+  kindig: 'Beth Kindig',
+  cathie: 'Cathie Wood',
+  serenity: 'Serenity',
+  minervini: 'Mark Minervini',
+  'panel-consensus': 'Panel Consensus',
+  beth_kindig: 'Beth Kindig',
+  cathie_wood: 'Cathie Wood'
 };
+function guruTagClass(key) {
+  if (key === 'panel-consensus') return 'panel-consensus';
+  if (key === 'beth_kindig') return 'kindig';
+  if (key === 'cathie_wood') return 'cathie';
+  return key;
+}
 
-let chart = null;
+// ============ 战绩榜 (auto-load from ../calls.json) ============
+
+let hitRateChart = null;
+
+function computeSummary(calls) {
+  const stats = {};
+  const scoredPool = [];
+  const pending = [];
+  for (const c of calls) {
+    if (!stats[c.guru]) stats[c.guru] = { guru: c.guru, total: 0, correct: 0, wrong: 0, neutral: 0, unscorable: 0, pending: 0, weighted: 0, moves: [] };
+    const s = stats[c.guru];
+    s.total++;
+    const graded = c.scored_90d || c.scored_30d;
+    if (!graded) { s.pending++; pending.push(c); continue; }
+    const v = graded.verdict || 'unscorable';
+    if (s[v] === undefined) s[v] = 0;
+    s[v]++;
+    if (typeof graded.move_pct === 'number') s.moves.push(graded.move_pct);
+    if (v === 'correct') { s.weighted += c.conviction; scoredPool.push([c, graded]); }
+    else if (v === 'wrong') { s.weighted -= c.conviction; scoredPool.push([c, graded]); }
+  }
+  const gurus = Object.values(stats).sort((a, b) => b.weighted - a.weighted);
+  for (const g of gurus) {
+    const decided = g.correct + g.wrong;
+    g.decided = decided;
+    g.hit_rate = decided ? g.correct / decided : null;
+    g.avg_move_pct = g.moves.length ? g.moves.reduce((a, b) => a + b, 0) / g.moves.length : null;
+  }
+  const pack = ([c, g]) => ({ guru: c.guru, ticker: c.ticker, action: c.action, conviction: c.conviction, move_pct: g.move_pct, reasoning: g.reasoning || '', verdict: g.verdict, created_at: c.created_at || '' });
+  const best = scoredPool.filter(([_, g]) => g.verdict === 'correct').sort((a, b) => b[0].conviction - a[0].conviction).slice(0, 3).map(pack);
+  const worst = scoredPool.filter(([_, g]) => g.verdict === 'wrong').sort((a, b) => b[0].conviction - a[0].conviction).slice(0, 3).map(pack);
+  return { total_calls: calls.length, gurus, best, worst, pending_count: pending.length };
+}
+
+async function loadBattingBoard() {
+  const errEl = document.getElementById('batting-error');
+  const emptyEl = document.getElementById('batting-empty');
+  const contentEl = document.getElementById('batting-content');
+  const metaEl = document.getElementById('batting-meta');
+  errEl.style.display = 'none';
+  emptyEl.style.display = 'none';
+  contentEl.style.display = 'none';
+  metaEl.textContent = '加载中…';
+  try {
+    const resp = await fetch('../calls.json', { cache: 'no-cache' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const calls = await resp.json();
+    if (!Array.isArray(calls) || calls.length === 0) {
+      emptyEl.style.display = 'block';
+      metaEl.textContent = `加载于 ${new Date().toLocaleString('zh-CN')} · calls.json 为空`;
+      return;
+    }
+    const summary = computeSummary(calls);
+    renderBattingCards(summary);
+    renderBestWorst(summary);
+    renderHitRateChart(summary);
+    contentEl.style.display = 'block';
+    metaEl.textContent = `加载于 ${new Date().toLocaleString('zh-CN')} · 共 ${summary.total_calls} 条 calls · ${summary.pending_count} 条待评`;
+  } catch (e) {
+    errEl.textContent = `无法加载 ../calls.json: ${e.message}。如果你是直接 file:// 打开 dashboard，浏览器 fetch 会被同源策略阻止；请运行 python3 -m http.server 然后访问 http://localhost:8000/dashboard/。`;
+    errEl.style.display = 'block';
+    metaEl.textContent = '';
+  }
+}
+
+function renderBattingCards(summary) {
+  const container = document.getElementById('batting-cards');
+  container.innerHTML = '';
+  for (const g of summary.gurus) {
+    const hr = g.hit_rate === null ? 'n/a' : `${(g.hit_rate * 100).toFixed(0)}%`;
+    const cls = g.hit_rate === null ? 'neutral' : (g.hit_rate >= 0.55 ? 'positive' : (g.hit_rate >= 0.45 ? 'neutral' : 'negative'));
+    const weightedSign = g.weighted_score === undefined ? (g.weighted >= 0 ? '+' : '') : (g.weighted_score >= 0 ? '+' : '');
+    const weightedVal = g.weighted_score === undefined ? g.weighted : g.weighted_score;
+    const avgMove = g.avg_move_pct === null ? '—' : `${g.avg_move_pct >= 0 ? '+' : ''}${g.avg_move_pct.toFixed(1)}%`;
+    container.innerHTML += `
+      <div class="card">
+        <h3><span class="guru-tag ${guruTagClass(g.guru)}">${GURU_NAMES[g.guru] || g.guru}</span></h3>
+        <div class="metric ${cls}">${hr}</div>
+        <div class="metric-label">命中率 · ${g.correct}✅ / ${g.wrong}❌ / ${g.decided} decided · ${g.pending} pending</div>
+        <div class="summary-line">
+          加权分: <span class="num">${weightedSign}${weightedVal}</span> ·
+          平均涨幅: <span class="num">${avgMove}</span> ·
+          总条数: <span class="num">${g.total}</span>
+        </div>
+      </div>`;
+  }
+}
+
+function renderBestWorst(summary) {
+  const renderList = (containerId, list, fallback) => {
+    const el = document.getElementById(containerId);
+    if (!list.length) { el.innerHTML = `<div class="empty" style="padding:8px;">${fallback}</div>`; return; }
+    el.innerHTML = list.map(r => {
+      const sign = (r.move_pct ?? 0) >= 0 ? 'positive' : 'negative';
+      const moveStr = r.move_pct === null || r.move_pct === undefined ? '—' : `${r.move_pct >= 0 ? '+' : ''}${r.move_pct.toFixed(1)}%`;
+      return `
+        <div class="row" style="padding:8px 0; border-bottom:1px solid var(--border);">
+          <span class="guru-tag ${guruTagClass(r.guru)}">${GURU_NAMES[r.guru] || r.guru}</span>
+          <span class="ticker">${r.ticker}</span>
+          <span class="action-pill ${r.action}">${r.action}</span>
+          <span class="conv-pill">conv=${r.conviction}</span>
+          <span class="move ${sign}">${moveStr}</span>
+        </div>
+        <div class="reason" style="margin-bottom:8px;">${r.reasoning || ''}</div>
+      `;
+    }).join('');
+  };
+  renderList('best-calls', summary.best, '尚无 correct calls');
+  renderList('worst-calls', summary.worst, '尚无 wrong calls (恭喜)');
+}
+
+function renderHitRateChart(summary) {
+  const ctx = document.getElementById('hitRateChart').getContext('2d');
+  if (hitRateChart) hitRateChart.destroy();
+  const decided = summary.gurus.filter(g => g.decided > 0);
+  hitRateChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: decided.map(g => GURU_NAMES[g.guru] || g.guru),
+      datasets: [{
+        label: 'Hit rate %',
+        data: decided.map(g => +(g.hit_rate * 100).toFixed(1)),
+        backgroundColor: decided.map(g => GURU_COLORS[g.guru] || '#999'),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toFixed(1)}%` } } },
+      scales: {
+        x: { ticks: { color: '#718096' }, grid: { display: false } },
+        y: { ticks: { color: '#718096', callback: v => v + '%' }, grid: { color: '#2d3748' }, suggestedMin: 0, suggestedMax: 100 }
+      }
+    }
+  });
+}
+
+// ============ 投资竞赛 (paste JSON, unchanged behaviour) ============
+
+let returnChart = null;
 
 function loadExample() {
   const example = {
-    competition_start: "2026-06-03",
+    competition_start: '2026-06-03',
     gurus: {
       serenity: { daily_returns: [0, 1.2, -0.5, 2.1, 0.8, 1.5], current_value: 10520, cash_pct: 3, holdings_count: 5 },
       beth_kindig: { daily_returns: [0, 0.8, 0.3, 1.5, 0.6, 0.4], current_value: 10365, cash_pct: 9, holdings_count: 7 },
@@ -129,32 +325,21 @@ function loadExample() {
     }
   };
   document.getElementById('data-input').value = JSON.stringify(example, null, 2);
-  renderDashboard();
+  renderCompetition();
 }
 
-function renderDashboard() {
+function renderCompetition() {
   const raw = document.getElementById('data-input').value.trim();
   let data;
-  try {
-    data = JSON.parse(raw);
-  } catch (e) {
-    alert('Invalid JSON: ' + e.message);
-    return;
-  }
-
-  document.getElementById('dashboard').style.display = 'block';
-  renderSummaryCards(data);
-  renderChart(data);
-  renderTable(data);
+  try { data = JSON.parse(raw); } catch (e) { alert('Invalid JSON: ' + e.message); return; }
+  document.getElementById('competition').style.display = 'block';
+  renderCompSummaryCards(data);
+  renderCompChart(data);
+  renderCompTable(data);
 }
 
-function guruTagClass(key) {
-  const map = { serenity:'serenity', beth_kindig:'beth', cathie_wood:'cathie', buffett:'buffett', dalio:'dalio', minervini:'minervini' };
-  return map[key] || key.split('_')[0];
-}
-
-function renderSummaryCards(data) {
-  const container = document.getElementById('summary-cards');
+function renderCompSummaryCards(data) {
+  const container = document.getElementById('comp-summary-cards');
   container.innerHTML = '';
   for (const [key, guru] of Object.entries(data.gurus)) {
     const ret = ((guru.current_value - 10000) / 10000 * 100).toFixed(2);
@@ -163,41 +348,25 @@ function renderSummaryCards(data) {
       <div class="card">
         <h3><span class="guru-tag ${guruTagClass(key)}">${GURU_NAMES[key] || key}</span></h3>
         <div class="metric ${isPositive ? 'positive' : 'negative'}">${isPositive ? '+' : ''}${ret}%</div>
-        <div class="metric-label">$${guru.current_value.toLocaleString()} / Cash: ${guru.cash_pct}%</div>
+        <div class="metric-label">$${guru.current_value.toLocaleString()} / 现金 ${guru.cash_pct}%</div>
       </div>`;
   }
 }
 
-function renderChart(data) {
+function renderCompChart(data) {
   const ctx = document.getElementById('returnChart').getContext('2d');
-  if (chart) chart.destroy();
-
+  if (returnChart) returnChart.destroy();
   const datasets = [];
   for (const [key, guru] of Object.entries(data.gurus)) {
-    const cumulative = [];
-    let cum = 0;
-    for (const r of guru.daily_returns) {
-      cum += r;
-      cumulative.push(parseFloat(cum.toFixed(2)));
-    }
-    datasets.push({
-      label: GURU_NAMES[key] || key,
-      data: cumulative,
-      borderColor: GURU_COLORS[key] || '#999',
-      backgroundColor: 'transparent',
-      tension: 0.3,
-      pointRadius: 3
-    });
+    const cumulative = []; let cum = 0;
+    for (const r of guru.daily_returns) { cum += r; cumulative.push(parseFloat(cum.toFixed(2))); }
+    datasets.push({ label: GURU_NAMES[key] || key, data: cumulative, borderColor: GURU_COLORS[key] || '#999', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3 });
   }
-
   const labels = datasets[0].data.map((_, i) => `Day ${i}`);
-
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets },
+  returnChart = new Chart(ctx, {
+    type: 'line', data: { labels, datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: { legend: { labels: { color: '#e2e8f0' } } },
       scales: {
         x: { ticks: { color: '#718096' }, grid: { color: '#2d3748' } },
@@ -207,7 +376,7 @@ function renderChart(data) {
   });
 }
 
-function renderTable(data) {
+function renderCompTable(data) {
   const tbody = document.querySelector('#snapshot-table tbody');
   tbody.innerHTML = '';
   for (const [key, guru] of Object.entries(data.gurus)) {
@@ -223,6 +392,9 @@ function renderTable(data) {
       </tr>`;
   }
 }
+
+// auto-load batting board on page open
+loadBattingBoard();
 </script>
 </body>
 </html>

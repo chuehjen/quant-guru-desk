@@ -1,7 +1,7 @@
 ---
 name: quant-guru-desk
-description: "A desk of distilled investing-guru AI agents. Summon any famous investor to analyze stocks, build a portfolio, or run a daily competition decision in their style. Roster: Warren Buffett (value / moat / owner earnings), Ray Dalio (macro-systematic / debt cycles / All Weather), Beth Kindig (fundamental forward-revenue tech growth), Cathie Wood (disruptive innovation / Wright's Law), Serenity (AI supply-chain chokepoints), Mark Minervini (momentum timing / SEPA / VCP entries). Every signal card is appended to calls.json and graded by scripts/track_calls.py against actual price 30/90 days later — the desk keeps a public batting average. When no guru is named, the desk recommends the best-fit guru for the question. Use when the user mentions any of these gurus, asks for investment/stock analysis, portfolio decisions, an AI investing competition, or says: 'quant guru desk', '大神事务所', '召唤大神', '帮我选股', '投资分析', 'run serenity/kindig/cathie/buffett/dalio/minervini', '木头姐', '巴菲特', '达里奥', '米内尔维尼', '会诊', '大神对比', '价值投资', '护城河', '宏观', '债务周期', '动量', 'VCP', '买入时机', '命中率', 'batting average'."
-version: 2.1.0
+description: "A desk of distilled investing-guru AI agents. Summon any famous investor to analyze stocks, build a portfolio, or run a daily competition decision in their style. Roster: Warren Buffett (value / moat / owner earnings), Ray Dalio (macro-systematic / debt cycles / All Weather), Beth Kindig (fundamental forward-revenue tech growth), Cathie Wood (disruptive innovation / Wright's Law), Serenity (AI supply-chain chokepoints), Mark Minervini (momentum timing / SEPA / VCP entries). Every signal card is appended to calls.json and graded by scripts/track_calls.py against actual price 30/90 days later — the desk keeps a public batting average. When no guru is named, the desk recommends the best-fit guru for the question. Use when the user mentions any of these gurus, asks for investment/stock analysis, portfolio decisions, portfolio checkup, an AI investing competition, or says: 'quant guru desk', '大神事务所', '召唤大神', '帮我选股', '投资分析', '持仓体检', 'portfolio checkup', '帮我看看仓位', '这些票还留吗', 'run serenity/kindig/cathie/buffett/dalio/minervini', '木头姐', '巴菲特', '达里奥', '米内尔维尼', '会诊', '大神对比', '价值投资', '护城河', '宏观', '债务周期', '动量', 'VCP', '买入时机', '命中率', 'batting average'."
+version: 2.2.0
 ---
 
 # Quant Guru Desk
@@ -34,7 +34,7 @@ Classify the request, then act:
 
 3. **Panel / 会诊 / 对比 / "let the gurus debate"** → run 2-3 gurus on the same question (read each SKILL.md), then output each guru's verdict side-by-side plus a consensus/divergence summary. See "Panel mode" below.
 
-4. **Combo / 组合 / 全流程 / "选股+定时机+定仓位"** → 🧪 **DEPRECATED — frozen until Panel proves out a >55% hit rate in `calls.json`.** Combo串联多位大师误差累积，统计意义未验证。先把 Panel 模式跑出可信的批量结果再回来谈 Combo。详见 "Combo mode" 段（保留作历史参考）。
+4. **持仓体检 / Portfolio Checkup / "帮我看看仓位" / "这些票还留吗"** → user pastes their current holdings → 逐票过 Panel，每位大师出 verdict (KEEP / TRIM / CUT / ADD)。见 "持仓体检 mode" 下方段落。
 
 5. **Competition** — user is running the AI investing competition → use the shared rules and output format in `shared/competition-rules.md`, executed in the chosen guru's voice (or panel).
 
@@ -83,88 +83,72 @@ When asked for a panel or comparison:
 
 Honor each guru's hard rules; never blend their methods into a mush — the value is in the contrast.
 
-## Combo mode (组合工作流) — 🧪 DEPRECATED
+## 持仓体检 mode (Portfolio Checkup)
 
-> **Status: frozen.** Combo 默认情况下不应被使用。Panel 模式跑出 >55% 命中率（按 `scripts/track_calls.py summary` 的 hit-rate 列）之前，事务所只用 Panel 模式做多大师协作。
->
-> **理由：** 串联多位大师的判断在统计上是误差相乘，不是互相校验。即使有一票否决兜底，也只是降低了 false positive，无法解决"前一步选错标的导致后一步白跑"的问题。先把单大师和 Panel 的 hit rate 跑出来再考虑组合模式。
->
-> 用户主动要求 Combo 时：先跑 `track_calls.py summary`，把当前命中率告诉用户，并说明"在 Panel hit rate 突破 55% 之前 Combo 视为实验性、不计入正式判断记录"。如果用户仍坚持，可以执行下面的流水线，但 **calls.json 中标 `competition_run: false`，且不写入 panel-consensus 记录**。
-
-下面的流水线说明保留作历史参考——
+解决用户最高频的真实问题：**"我已经持有了，怎么办？"**
 
 ### 触发
 
 用户说：
-- "帮我选股+定时机+定仓位"
-- "combo / 组合流程 / 全流程"
-- "从选股到下单全走一遍"
-- 或明确指定多位大师各自负责的环节
+- "帮我看看仓位 / 持仓体检 / portfolio checkup"
+- "这些票还留吗 / 帮我过一下持仓"
+- 直接贴一份持仓列表（无论格式，自动进入此模式）
 
-### 默认流水线（用户未指定时）
+### 输入
 
-```
-Step 1 — Dalio 定环境
-→ 当前象限 + 暴露度建议 + 适合的资产类别
+用户提供一份持仓表（不限格式）。至少需要：ticker + 数量或占比。可选：均价 / 入场日。如果缺少关键信息，ask once。
 
-Step 2 — Buffett 或 Kindig 选标的（取决于 Step 1）
-→ 若 Goldilocks/Reflation → Kindig（成长+估值）
-→ 若 Stagflation/Deflation → Buffett（防御+价值）
-→ 输出 3-5 个候选 ticker + 信号卡
+### 工作流
 
-Step 3 — Minervini 定时机
-→ 对 Step 2 的候选逐一做 Stage Analysis + VCP 评估
-→ 筛掉 Stage ≠ 2 或 VCP 未就绪的
-→ 输出精确入场价/止损/仓位
+1. 对用户持仓中的 **每只票**，逐一让 6 位大师（或用户指定 2-3 位）给出 verdict：
 
-Step 4 — 综合信号卡
-→ 合并三步结论为一张最终决策卡
-```
+   | 动作 | 含义 | 何时给 |
+   |------|------|--------|
+   | **KEEP** | 持有逻辑完好，不动 | 基本面/技术面均未恶化 |
+   | **TRIM** | 减仓（过度集中 / 盈利锁定 / 确信下降） | 仓位过重 or 部分获利了结 |
+   | **CUT** | 清仓（论点崩塌 / 触止损 / Stage 4） | 严重恶化，不再符合该大师框架 |
+   | **ADD** | 加仓（回调到好价位 / 确信升高） | 跌入加仓区间 + 基本面更强 |
 
-### 自定义流水线
+2. 每位大师 verdict 附一句理由（≤30字）。
 
-用户可指定任意组合，例如：
-- "Serenity 选标的 + Minervini 定时机"（两步）
-- "Dalio 看大环境 + Cathie 选颠覆标的 + Buffett 估值检验"（三步互相挑战）
-- "全员上"（6 大师各说一句 → 共识摘要）→ 退化为 Panel 模式
-
-### 输出格式
+3. 汇总为一张持仓体检表：
 
 ```
-## 🧪 Combo 工作流 — [主题/TICKER] — [DATE]
+## 📋 持仓体检 — [DATE]
 
-### Step 1: 宏观环境 (by Dalio)
-[象限判断 + 暴露度]
+| Ticker | 仓位 | Buffett | Dalio | Kindig | Cathie | Serenity | Minervini | 多数票 |
+|--------|------|---------|-------|--------|--------|----------|-----------|--------|
+| NVDA | 25% | KEEP | KEEP | TRIM | KEEP | KEEP | TRIM | KEEP(4) |
+| CRSP | 10% | CUT | — | — | KEEP | — | CUT | 分歧 |
+| ... | | | | | | | | |
 
-### Step 2: 标的筛选 (by [选中的大师])
-[候选列表 + 各自评分]
+### 需要关注的票
+- **CRSP**: 分歧严重（Cathie KEEP vs Buffett/Minervini CUT），建议用户自行判断——如果你的时间框架 > 3 年跟 Cathie，< 1 年跟 Minervini。
 
-### Step 3: 入场时机 (by Minervini)
-[VCP 状态 + 通过/淘汰]
-
-### 📊 最终信号卡
-| 字段 | 值 |
-|------|-----|
-| Ticker | [最终推荐] |
-| 流水线 | Dalio→Kindig→Minervini |
-| 信心度 | [综合] |
-| 动作 | BUY / WATCH |
-| 入场价 | $ |
-| 止损 | $ |
-| 仓位 | % |
-| 宏观前提 | [如果这个前提变了，整套失效] |
-
----
-仅作信息跟踪，不构成投资建议。
+### 整体诊断
+- 集中度：[前 3 只占比 X%，是否过于集中]
+- 风格暴露：[全是 growth / 缺防御 / 等]
+- 建议：[如有宏观切换风险则提示 Dalio 视角]
 ```
 
 ### 规则
 
-1. 每一步严格执行该大师自己的 SKILL.md，不跨界
-2. 后一步可以否决前一步的候选（Minervini 可以说"Kindig 选的 5 只都不在 Stage 2，全部 WATCH"）
-3. 如果流水线中某一步否决了所有标的 → 最终结论 = "当前无合格机会，保持现金"
-4. 信心度取最低分（短板决定整体信心）
-5. "宏观前提"字段标注 Dalio 步骤的关键假设 — 如果假设翻转，整套决策失效
+1. 每位大师只在自己**方法论覆盖范围内**投票。Buffett 不评没护城河的 meme 股（标"—"），Serenity 不评消费品（标"—"）。
+2. "—" = 该大师没有方法论覆盖此票，不投票，不计入多数票。
+3. **不为每只票生成完整 signal card**（太长）。但如果某只票被 ≥2 位大师标 CUT → 自动附一段 bear case 摘要（复用 signal-card 的 "最强反方" 字段逻辑）。
+4. 持仓体检 **不写入 `calls.json`**（因为是评估现有持仓而非新推荐）。如果体检后用户说"那我加仓 X 吧"并要你分析→ 走正常 Named guru / Panel 流程，写入 calls.json。
+5. 面对用户"全部 KEEP"的结果不要美化——如果真的没问题就是没问题，不用硬挑毛病。
+
+---
+
+<details>
+<summary>🧪 Combo mode（历史参考，已废弃）</summary>
+
+> **Status: deprecated.** Combo（选股+定时机+定仓位全流程串联）在 Panel hit rate > 55% 之前不启用。理由：串联多位大师误差相乘而非互校验。用户强行要求可执行，但 calls.json 标 `competition_run: false` 且不写 panel-consensus。
+
+默认流水线：Dalio 定环境 → Buffett/Kindig 选标的 → Minervini 定时机 → 综合信号卡。详见 git 历史。
+
+</details>
 
 ## Shared resources
 
